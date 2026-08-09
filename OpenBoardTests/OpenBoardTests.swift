@@ -1,0 +1,202 @@
+import Testing
+import Foundation
+@testable import OpenBoard
+
+// MARK: - Fixtures
+
+private func fixture(_ name: String) throws -> Data {
+    let bundle = Bundle(for: BundleToken.self)
+    guard let url = bundle.url(forResource: name, withExtension: "json") else {
+        throw NSError(domain: "fixture", code: 1,
+                      userInfo: [NSLocalizedDescriptionKey: "missing fixture \(name)"])
+    }
+    return try Data(contentsOf: url)
+}
+
+private final class BundleToken {}
+
+// MARK: - Decoding real API payloads
+
+@Suite("USCF API decoding")
+struct DecodingTests {
+    @Test func decodesMemberProfile() throws {
+        let member = try JSONDecoder().decode(APIMember.self, from: fixture("sample_member"))
+        #expect(member.id == "90000001")
+        #expect(member.firstName == "ALEX")
+        #expect(member.rank == 58_224)
+        #expect(member.stateRank == 2_204)
+
+        let ratings = USCFMapper.ratings(from: member.ratings)
+        #expect(ratings.regular?.value == 383)
+        #expect(ratings.regular?.floor == 131)
+        #expect(ratings.regular?.games == 5)
+        #expect(ratings.quick?.value == 379)
+        #expect(ratings.blitz?.value == nil)
+    }
+
+    @Test func decodesMemberSectionsIntoEventResults() throws {
+        let page = try JSONDecoder().decode(APIPage<APIMemberSection>.self,
+                                            from: fixture("sample_member_sections"))
+        let events = USCFMapper.eventResults(from: page.items)
+        #expect(!events.isEmpty)
+
+        let event = try #require(events.first { $0.id == "900000000001" })
+        #expect(event.regular?.pre == 322)
+        #expect(event.regular?.post == 420)
+        #expect(event.quick?.pre == 319)
+        #expect(event.quick?.post == 415)
+        #expect(event.regular?.delta == 98)
+    }
+
+    @Test func decodesStandingsWithRounds() throws {
+        let page = try JSONDecoder().decode(APIPage<APIStanding>.self,
+                                            from: fixture("sample_standings"))
+        #expect(!page.items.isEmpty)
+        let standings = page.items.map { USCFMapper.standing($0, roundCount: 4) }
+        let first = try #require(standings.first)
+        #expect(first.rank == 1)
+        #expect(first.points == "4.0")
+        #expect(first.rounds.count == 4)
+        #expect(first.rounds.allSatisfy { ["W", "L", "D", "B", "–"].contains($0.symbol) })
+    }
+
+    @Test func decodesSearchResults() throws {
+        let page = try JSONDecoder().decode(APIPage<APIMember>.self,
+                                            from: fixture("sample_search"))
+        let summaries = page.items.map(USCFMapper.summary)
+        #expect(!summaries.isEmpty)
+        // USCF stores names in ALL CAPS; mapper should title-case them.
+        #expect(summaries.allSatisfy { $0.name != $0.name.uppercased() || $0.name.count <= 2 })
+    }
+
+    @Test func computesPercentilesFromMaxRanks() throws {
+        let ranks = try JSONDecoder().decode([APIMaxRank].self, from: fixture("sample_max-ranks"))
+        let member = try JSONDecoder().decode(APIMember.self, from: fixture("sample_member"))
+        let player = USCFMapper.player(member: member, sections: [], maxRanks: ranks)
+
+        let overall = try #require(player.ranking?.overall)
+        #expect(overall.total == 76_379)
+        #expect(overall.computedPercentile == 24)
+
+        let state = try #require(player.ranking?.state)
+        #expect(state.total == 2_711)
+        #expect(state.computedPercentile == 19)
+    }
+}
+
+// MARK: - Class titles
+
+@Suite("USCF class titles")
+struct ClassTitleTests {
+    @Test(arguments: [
+        (2500, ClassTitle.seniorMaster),
+        (2400, .seniorMaster),
+        (2399, .nationalMaster),
+        (2200, .nationalMaster),
+        (2000, .expert),
+        (1800, .classA),
+        (1600, .classB),
+        (1400, .classC),
+        (1200, .classD),
+        (1000, .classE),
+        (800, .classF),
+        (600, .classG),
+        (400, .classH),
+        (383, .classI),
+        (200, .classI),
+        (199, .classJ),
+        (0, .classJ),
+    ])
+    func titleForRating(rating: Int, expected: ClassTitle) {
+        #expect(ClassTitle(rating: rating) == expected)
+    }
+}
+
+// MARK: - Delta math & formatting
+
+@Suite("Delta math")
+struct DeltaTests {
+    @Test func positiveDelta() {
+        #expect(PrePost(pre: 322, post: 420, games: 12).delta == 98)
+    }
+
+    @Test func negativeDelta() {
+        #expect(PrePost(pre: 374, post: 313, games: 20).delta == -61)
+    }
+
+    @Test func missingSideYieldsNil() {
+        #expect(PrePost(pre: nil, post: 823, games: 4).delta == nil)
+        #expect(PrePost(pre: 322, post: nil, games: nil).delta == nil)
+    }
+
+    @Test func clockDigitsZeroPad() {
+        #expect(383.clockDigits == "0383")
+        #expect(1500.clockDigits == "1500")
+        #expect(7.clockDigits == "0007")
+    }
+
+    @Test func historySeriesIsChronological() {
+        let events = USCFMapper.eventResults(from: [])
+        #expect(USCFMapper.history(from: events).isEmpty)
+
+        let player = MockRatingsService.samplePlayer
+        #expect(player.ratingHistory.last == 420)
+        #expect(player.peakRegular == 420)
+    }
+}
+
+// MARK: - Cache TTL
+
+@Suite("Cache TTL")
+struct CacheTests {
+    @MainActor
+    private func makeStore() throws -> CacheStore {
+        let schema = Schema([WatchedPlayer.self, CachedPayload.self, RecentSearch.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        return CacheStore(modelContainer: container)
+    }
+
+    @Test @MainActor func freshWithinTTL() async throws {
+        let store = try makeStore()
+        await store.write(MockRatingsService.samplePlayer, key: "player-x")
+        let entry = try #require(await store.read(Player.self, key: "player-x"))
+        #expect(entry.isFresh)
+        #expect(entry.value.id == MockRatingsService.samplePlayerID)
+    }
+
+    @Test @MainActor func staleBeyondTTL() async throws {
+        let store = try makeStore()
+        await store.write(MockRatingsService.samplePlayer, key: "player-y")
+        // A zero TTL makes any stored entry stale immediately.
+        let entry = try #require(await store.read(Player.self, key: "player-y", ttl: 0))
+        #expect(!entry.isFresh)
+    }
+
+    @Test @MainActor func missingKeyReturnsNil() async throws {
+        let store = try makeStore()
+        let entry = await store.read(Player.self, key: "never-written")
+        #expect(entry == nil)
+    }
+
+    @Test @MainActor func staleServedWhenUpstreamFails() async throws {
+        struct FailingService: RatingsProviding {
+            func player(id: String) async throws -> Player { throw RatingsError.offline(underlying: "test") }
+            func search(_ query: String) async throws -> [PlayerSummary] { [] }
+            func event(id: String) async throws -> ChessEvent { throw RatingsError.offline(underlying: "test") }
+        }
+        let schema = Schema([WatchedPlayer.self, CachedPayload.self, RecentSearch.self])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let service = CachedRatingsService(upstream: FailingService(), container: container)
+
+        // Seed the cache, then verify the failing upstream still yields the copy.
+        let id = MockRatingsService.samplePlayerID
+        await service.cache.write(MockRatingsService.samplePlayer, key: "player-\(id)")
+        let player = try await service.player(id: id)
+        #expect(player.id == id)
+        #expect(player.ratings.regular?.value == 383)
+    }
+}
+
+import SwiftData

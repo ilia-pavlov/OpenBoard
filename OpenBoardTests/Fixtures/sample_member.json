@@ -1,0 +1,17 @@
+{
+  "id": "90000001",
+  "firstName": "ALEX",
+  "lastName": "RIVERA",
+  "stateRep": "NJ",
+  "jurisdiction": "NJ",
+  "rank": 58224,
+  "stateRank": 2204,
+  "ratings": [
+    { "ratingSystem": "R", "rating": 383, "gamesPlayed": 5, "isProvisional": true, "floor": 131 },
+    { "ratingSystem": "Q", "rating": 379, "gamesPlayed": 5, "isProvisional": true, "floor": 131 },
+    { "ratingSystem": "B", "isProvisional": true },
+    { "ratingSystem": "OR", "isProvisional": true },
+    { "ratingSystem": "OQ", "isProvisional": true },
+    { "ratingSystem": "OB", "isProvisional": true }
+  ]
+}

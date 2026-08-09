@@ -1,0 +1,7 @@
+# Xcode / generated
+OpenBoard.xcodeproj/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+.DS_Store

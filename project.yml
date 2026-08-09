@@ -1,0 +1,82 @@
+name: OpenBoard
+options:
+  bundleIdPrefix: com.iliapavlov
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SUPPORTS_MACCATALYST: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  OpenBoard:
+    type: application
+    platform: iOS
+    sources:
+      - OpenBoard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iliapavlov.openboard
+        PRODUCT_NAME: OpenBoard
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+    info:
+      path: OpenBoard/Info.plist
+      properties:
+        CFBundleDisplayName: OpenBoard
+        UILaunchScreen: {}
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.iliapavlov.openboard.refresh
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+  OpenBoardTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - OpenBoardTests
+    dependencies:
+      - target: OpenBoard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iliapavlov.openboard.tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/OpenBoard.app/OpenBoard
+        BUNDLE_LOADER: $(TEST_HOST)
+  OpenBoardUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - OpenBoardUITests
+    dependencies:
+      - target: OpenBoard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iliapavlov.openboard.uitests
+        TEST_TARGET_NAME: OpenBoard
+schemes:
+  OpenBoard:
+    build:
+      targets:
+        OpenBoard: all
+        OpenBoardTests: [test]
+        OpenBoardUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OpenBoardTests
+        - OpenBoardUITests

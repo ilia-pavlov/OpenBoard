@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "ordinal": 1,
+      "memberId": "90000010",
+      "firstName": "Ava",
+      "lastName": "Sterling",
+      "stateRep": "NJ",
+      "score": 4,
+      "ratings": [
+        { "preRating": 800, "postRating": 823, "ratingSystem": "R", "postProvisionalGameCount": 4 },
+        { "preRating": 795, "postRating": 818, "ratingSystem": "Q", "postProvisionalGameCount": 4 }
+      ],
+      "roundOutcomes": [
+        { "roundNumber": 1, "outcome": "Win", "color": "Black", "opponentOrdinal": 7 },
+        { "roundNumber": 2, "outcome": "Win", "color": "White", "opponentOrdinal": 6 },
+        { "roundNumber": 3, "outcome": "Win", "color": "Black", "opponentOrdinal": 4 },
+        { "roundNumber": 4, "outcome": "Draw", "color": "White", "opponentOrdinal": 2 }
+      ]
+    },
+    {
+      "ordinal": 2,
+      "memberId": "90000001",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "stateRep": "NJ",
+      "score": 3,
+      "ratings": [
+        { "preRating": 322, "postRating": 420, "ratingSystem": "R", "postProvisionalGameCount": 12 },
+        { "preRating": 319, "postRating": 415, "ratingSystem": "Q", "postProvisionalGameCount": 12 }
+      ],
+      "roundOutcomes": [
+        { "roundNumber": 1, "outcome": "Loss", "color": "White", "opponentOrdinal": 1 },
+        { "roundNumber": 2, "outcome": "Win", "color": "Black", "opponentOrdinal": 5 },
+        { "roundNumber": 3, "outcome": "Win", "color": "White", "opponentOrdinal": 6 },
+        { "roundNumber": 4, "outcome": "Win", "color": "Black", "opponentOrdinal": 3 }
+      ]
+    }
+  ],
+  "hasNextPage": false,
+  "offset": 0,
+  "pageSize": 100
+}

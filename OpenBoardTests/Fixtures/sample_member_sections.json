@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "sectionNumber": 1,
+      "sectionName": "Section 1 SS G/30 d5",
+      "startDate": "2026-08-06",
+      "endDate": "2026-08-06",
+      "ratingRecords": [
+        { "preRating": 322, "postRating": 420, "ratingSource": "R", "postProvisionalGameCount": 12 },
+        { "preRating": 319, "postRating": 415, "ratingSource": "Q", "postProvisionalGameCount": 12 }
+      ],
+      "event": {
+        "id": "900000000001",
+        "name": "SAMPLE SCHOLASTIC OPEN 2026",
+        "startDate": "2026-08-06",
+        "stateCode": "NJ"
+      }
+    }
+  ],
+  "hasNextPage": false,
+  "offset": 0,
+  "pageSize": 50
+}

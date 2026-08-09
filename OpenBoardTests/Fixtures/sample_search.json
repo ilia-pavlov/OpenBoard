@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "90000030",
+      "firstName": "TAYLOR",
+      "lastName": "MORGAN",
+      "stateRep": "CA",
+      "ratings": [
+        { "ratingSystem": "R", "rating": 2100, "isProvisional": false, "floor": 2000 }
+      ]
+    },
+    {
+      "id": "90000031",
+      "firstName": "JAMIE",
+      "lastName": "LEE",
+      "stateRep": "NY",
+      "ratings": [
+        { "ratingSystem": "R", "rating": 1500, "isProvisional": false }
+      ]
+    }
+  ],
+  "hasNextPage": false,
+  "offset": 0,
+  "pageSize": 100
+}
