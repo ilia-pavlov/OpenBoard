@@ -52,6 +52,28 @@ final class AppModel {
         // No pre-seeded watchlist: the app launches empty. The user searches for
         // their own player (the first one watched becomes primary / "My Card")
         // and looks up tournaments by event ID.
+        if AppEnvironment.demoSeed { seedDemoWatchlist() }
+    }
+
+    /// Screenshot/demo only (`-demoSeed`): populate the watchlist with synthetic
+    /// sample players so My Card and Watching render with content.
+    private func seedDemoWatchlist() {
+        let ctx = container.mainContext
+        guard ((try? ctx.fetchCount(FetchDescriptor<WatchedPlayer>())) ?? 0) == 0 else { return }
+        let primary = MockRatingsService.samplePlayer
+        ctx.insert(WatchedPlayer(memberID: primary.id, name: primary.name, state: primary.state,
+                                 isPrimary: true, lastKnownRegular: primary.currentRegular,
+                                 lastKnownQuick: primary.currentQuick,
+                                 lastRatedDate: primary.events.first?.date, sortOrder: 0))
+        let rivals = MockRatingsService.sampleEvent.sections[0].players
+            .filter { $0.id != primary.id }.prefix(3)
+        for (index, s) in rivals.enumerated() {
+            ctx.insert(WatchedPlayer(memberID: s.id, name: s.name, state: s.state, isPrimary: false,
+                                     lastKnownRegular: s.regular?.post, lastKnownQuick: s.quick?.post,
+                                     lastRatedDate: MockRatingsService.sampleEvent.date,
+                                     sortOrder: index + 1))
+        }
+        try? ctx.save()
     }
 
     // MARK: - Watchlist helpers

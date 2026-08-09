@@ -317,19 +317,29 @@ All green on the iOS 26.5 simulator.
 - ✅ Unit + UI tests pass.
 - ✅ Dark-mode screenshots of every screen on iPhone 16 Pro and iPad Pro 13".
 
-## Screenshots
+## 📱 Screenshots
+
+> Shown with synthetic sample data — no real member's information is used.
 
 ### iPhone 16 Pro
-| My Card | Crosstable | Watchlist | Search |
-|---|---|---|---|
-| ![](Screenshots/iphone-mycard.png) | ![](Screenshots/iphone-event.png) | ![](Screenshots/iphone-watchlist.png) | ![](Screenshots/iphone-search.png) |
 
-Player profile (dual live/published): ![](Screenshots/iphone-profile.png)
+| My Card | Player profile | Crosstable (tap to expand) | Watchlist | Search |
+|:---:|:---:|:---:|:---:|:---:|
+| ![My Card](Screenshots/iphone-mycard.png) | ![Profile](Screenshots/iphone-profile.png) | ![Crosstable](Screenshots/iphone-event.png) | ![Watchlist](Screenshots/iphone-watchlist.png) | ![Search](Screenshots/iphone-search.png) |
 
-### iPad Pro 13" (NavigationSplitView)
-| My Card | Player profile | Crosstable |
-|---|---|---|
-| ![](Screenshots/ipad-mycard.png) | ![](Screenshots/ipad-profile.png) | ![](Screenshots/ipad-event.png) |
+### iPad Pro 13"  ·  `NavigationSplitView`
+
+On iPad, OpenBoard uses a sidebar (tabs + your watchlist) with a detail pane, and
+supports Slide Over, Split View, and Stage Manager.
+
+<p align="center">
+  <img alt="iPad My Card" src="Screenshots/ipad-mycard.png" width="49%">
+  <img alt="iPad Player profile" src="Screenshots/ipad-profile.png" width="49%">
+</p>
+<p align="center">
+  <img alt="iPad Crosstable" src="Screenshots/ipad-event.png" width="49%">
+  <img alt="iPad Watchlist" src="Screenshots/ipad-watchlist.png" width="49%">
+</p>
 
 ---
 

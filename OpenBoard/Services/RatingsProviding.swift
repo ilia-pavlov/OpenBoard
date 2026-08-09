@@ -55,4 +55,10 @@ enum AppEnvironment {
     static var autoExpandHighlight: Bool {
         ProcessInfo.processInfo.arguments.contains("-expandHighlight")
     }
+
+    /// Demo/screenshot helper: seed the watchlist with synthetic sample players so
+    /// My Card / Watching render populated. Never used by the shipping app.
+    static var demoSeed: Bool {
+        ProcessInfo.processInfo.arguments.contains("-demoSeed")
+    }
 }
