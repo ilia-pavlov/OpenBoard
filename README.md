@@ -1,29 +1,66 @@
-# OpenBoard
+<h1 align="center">♟️ OpenBoard</h1>
 
-A fast, beautiful native iOS/iPadOS client for US Chess Federation (USCF) ratings.
-Built with SwiftUI, Swift 6, SwiftData, and the iOS 26 Liquid Glass material language.
+<p align="center">
+  <strong>A fast, beautiful iOS &amp; iPadOS client for US Chess ratings.</strong><br>
+  <em>The ratings app chess parents and players actually want.</em>
+</p>
 
-The official US Chess app is an event check-in tool; the ratings website
-(ratings.uschess.org, "MUIR") is slow on mobile. OpenBoard is the app chess
-parents and players actually want — your player's ratings as glowing chess-clock
-digits, one-field search, full rating cards, live tournament crosstables, and a
-watchlist that notifies you when a followed player's rating changes.
+<p align="center">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-iOS%2026%2B%20%7C%20iPadOS%2026%2B-0B0E13?style=for-the-badge&logo=apple&logoColor=white">
+  <img alt="Swift" src="https://img.shields.io/badge/Swift-6.0-E9B44C?style=for-the-badge&logo=swift&logoColor=white">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-3DBCCB?style=for-the-badge&logo=swift&logoColor=white">
+  <img alt="Xcode" src="https://img.shields.io/badge/Xcode-26-147EFB?style=for-the-badge&logo=xcode&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-41D18B?style=for-the-badge">
+</p>
 
-<p>
-  <img src="Screenshots/iphone-mycard.png" width="240">
-  <img src="Screenshots/iphone-event.png" width="240">
-  <img src="Screenshots/iphone-watchlist.png" width="240">
+<p align="center">
+  <img src="Screenshots/iphone-mycard.png" width="220">
+  <img src="Screenshots/iphone-event.png" width="220">
+  <img src="Screenshots/iphone-watchlist.png" width="220">
 </p>
 
 ---
 
-## Build & run
+## ♞ What is OpenBoard?
+
+The official US Chess app is an event check-in tool, and the ratings website
+(ratings.uschess.org — **MUIR**) is slow on mobile. OpenBoard is a native client
+that makes tracking [**US Chess (USCF)**](https://new.uschess.org) ratings fast and
+delightful:
+
+- **♛ My Card** — your player's ratings as glowing chess-clock digits, with a rating
+  sparkline and recent events.
+- **🔍 Search** — one field for players (name or 8-digit member ID) and tournaments
+  (12-digit event ID).
+- **📈 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
+  by side, USCF class title, national + state ranking, and full event history.
+- **🏆 Crosstables** — standings with rating changes on every row; **tap a player to
+  see who they faced and each result**.
+- **❤️ Watchlist** — follow your kid, rivals, and teammates; get a local notification
+  when a followed player's rating changes.
+
+Built with **SwiftUI**, **Swift 6**, **SwiftData**, and the iOS 26 **Liquid Glass**
+material language. Universal (iPhone + iPad), with **zero third-party dependencies**.
+
+> **Data source:** ratings come from US Chess's **MUIR** platform (built by Leago).
+> &nbsp;·&nbsp; [US Chess](https://new.uschess.org)
+> &nbsp;·&nbsp; [Ratings site](https://ratings.uschess.org)
+> &nbsp;·&nbsp; [What is MUIR?](https://new.uschess.org/news/introducing-muir-member-uploads-information-and-reporting)
+>
+> *Not affiliated with or endorsed by the US Chess Federation.*
+
+---
+
+## 🚀 Install & run
+
+Requires **macOS with Xcode 26+** and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
-brew install xcodegen          # if not already installed
+git clone https://github.com/ilia-pavlov/OpenBoard.git
 cd OpenBoard
-xcodegen generate             # writes OpenBoard.xcodeproj from project.yml
-open OpenBoard.xcodeproj       # ⌘R on an iOS 26 simulator
+brew install xcodegen           # if not already installed
+xcodegen generate               # writes OpenBoard.xcodeproj from project.yml
+open OpenBoard.xcodeproj         # then ⌘R on an iOS 26 simulator
 ```
 
 - **Xcode 26+, Swift 6.** Deployment target iOS/iPadOS 26.0.
@@ -49,6 +86,24 @@ static var dataSource: DataSource {
 
 Everything above the service protocol (`RatingsProviding`) is identical in both
 modes — the UI only ever sees the domain models.
+
+---
+
+## 🎮 Using the app
+
+1. **Set up your card.** Open **Search**, find your player by name or 8-digit member
+   ID, open their profile, and tap **♥ Watch**. Your first watched player automatically
+   becomes your **My Card** home screen.
+2. **Follow rivals & friends.** Watch more players — they appear under **Watching**.
+   Long-press a row → *Make primary* to switch whose card is shown.
+3. **Open a tournament.** Go to **Events**, paste a 12-digit event ID, and open the
+   crosstable. **Tap any row** to expand a player's round-by-round games (opponents +
+   results). Followed players are outlined in gold and auto-scrolled to.
+4. **Track changes.** OpenBoard polls followed players in the background and fires a
+   local notification when a rating updates. Pull to refresh anytime.
+
+No account or sign-in. Reads fully from cache when offline, and ships a **zero-network
+demo mode** (`-mock` launch argument) with synthetic sample data.
 
 ---
 
