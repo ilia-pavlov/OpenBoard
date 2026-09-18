@@ -82,7 +82,7 @@ struct TabRootView: View {
             myCardPath = [.ratingHistory(player: MockRatingsService.samplePlayer, system: .regular)]
         case "event":
             model.selectedTab = .events
-            eventsPath = [.event(id: MockRatingsService.sampleEventID,
+            eventsPath = [.event(id: AppEnvironment.requestedScreenArg ?? MockRatingsService.sampleEventID,
                                  highlight: MockRatingsService.samplePlayerID)]
         default:
             break
@@ -158,7 +158,7 @@ struct SplitRootView: View {
             detailPath = [.ratingHistory(player: MockRatingsService.samplePlayer, system: .regular)]
         case "event":
             selection = .tab(.events)
-            detailPath = [.event(id: MockRatingsService.sampleEventID,
+            detailPath = [.event(id: AppEnvironment.requestedScreenArg ?? MockRatingsService.sampleEventID,
                                  highlight: MockRatingsService.samplePlayerID)]
         default: break
         }

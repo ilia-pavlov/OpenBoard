@@ -159,6 +159,21 @@ struct MockRatingsService: RatingsProviding {
                                   rd(3, "W", "Black", 5, "Owen Price"), rd(4, "L", "White", 4, "Liam Carter"),
                                   rd(5, "B", "", 0, "")]),
             ]),
+            // Extra sections (standings only) so the section selector has long names to show.
+            EventSection(name: "Section 2 Open U1200 G/45;d5 (K-12)", players: [
+                Standing(id: "90000020", rank: 1, name: "Noah Bennett", state: "NJ", points: "4.5",
+                         regular: PrePost(pre: 1104, post: 1152, games: nil)),
+                Standing(id: "90000021", rank: 2, name: "Chloe Ramirez", state: "NY", points: "3.5",
+                         regular: PrePost(pre: 1088, post: 1101, games: nil)),
+                Standing(id: "90000022", rank: 3, name: "Ethan Park", state: "NJ", points: "2.0",
+                         regular: PrePost(pre: 1015, post: 998, games: nil)),
+            ]),
+            EventSection(name: "Section 3 Championship Open G/60;d5", players: [
+                Standing(id: "90000030", rank: 1, name: "Sofia Martinez", state: "PA", points: "4.0",
+                         regular: PrePost(pre: 1802, post: 1815, games: nil)),
+                Standing(id: "90000031", rank: 2, name: "Daniel Okafor", state: "NJ", points: "3.0",
+                         regular: PrePost(pre: 1760, post: 1760, games: nil)),
+            ]),
         ]
     )
 

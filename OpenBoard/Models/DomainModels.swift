@@ -140,6 +140,10 @@ struct Standing: Identifiable, Codable, Sendable, Hashable {
     var quick: PrePost?
     /// Round-by-round results, when the backend provides them (iPad shows these).
     var rounds: [RoundOutcome] = []
+
+    var firstName: String {
+        name.split(separator: " ").first.map(String.init) ?? name
+    }
 }
 
 struct RoundOutcome: Codable, Sendable, Hashable {
