@@ -7,6 +7,8 @@ enum Destination: Hashable {
     case player(id: String)
     case event(id: String, highlight: String?)
     case ratingHistory(player: Player, system: RatingSystem)
+    case upcomingTournament(id: String)
+    case majorEvent(MajorEvent)
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
@@ -37,6 +39,8 @@ enum AppTab: String, CaseIterable, Identifiable {
 final class AppModel {
     let container: ModelContainer
     let service: CachedRatingsService
+    let tournaments: any TournamentsProviding
+    let location: LocationProvider
 
     var selectedTab: AppTab = .myCard
 
@@ -51,6 +55,8 @@ final class AppModel {
 
         let upstream: any RatingsProviding = mock ? MockRatingsService() : LiveRatingsService()
         service = CachedRatingsService(upstream: upstream, container: container)
+        tournaments = mock ? MockTournamentsService() : LiveTournamentsService()
+        location = LocationProvider(mock: mock)
 
         // No pre-seeded watchlist: the app launches empty. The user searches for
         // their own player (the first one watched becomes primary / "My Card")

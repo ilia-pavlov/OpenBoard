@@ -161,43 +161,21 @@ struct RatingHistoryView: View {
     /// Three equal-width chips that always fit one row; pick the "all" option to clear one.
     private var filterChips: some View {
         HStack(spacing: 8) {
-            chip(count.chipTitle, systemImage: "number", active: count != .all) {
+            FilterChip(title: count.chipTitle, systemImage: "number", active: count != .all) {
                 Picker("Events", selection: $count) {
                     ForEach(EventCount.allCases) { Text($0.title).tag($0) }
                 }
             }
-            chip(period.chipTitle, systemImage: "calendar", active: period != .all) {
+            FilterChip(title: period.chipTitle, systemImage: "calendar", active: period != .all) {
                 Picker("Time", selection: $period) {
                     ForEach(Period.allCases) { Text($0.title).tag($0) }
                 }
             }
-            chip(direction.chipTitle, systemImage: direction.systemImage, active: direction != .all) {
+            FilterChip(title: direction.chipTitle, systemImage: direction.systemImage, active: direction != .all) {
                 Picker("Result", selection: $direction) {
                     ForEach(Direction.allCases) { Label($0.title, systemImage: $0.systemImage).tag($0) }
                 }
             }
-        }
-    }
-
-    private func chip<Content: View>(_ title: String, systemImage: String, active: Bool,
-                                     @ViewBuilder content: () -> Content) -> some View {
-        Menu {
-            content()
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: systemImage).imageScale(.small)
-                Text(title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Image(systemName: "chevron.down").imageScale(.small)
-            }
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(active ? Color.obGold : .primary)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 7)
-            .background(active ? Color.obGold.opacity(0.14) : Color.obCard, in: Capsule())
-            .overlay(Capsule().strokeBorder(active ? Color.obGold.opacity(0.5) : Color.obHairline))
         }
     }
 
