@@ -6,6 +6,7 @@ import SwiftUI
 enum Destination: Hashable {
     case player(id: String)
     case event(id: String, highlight: String?)
+    case ratingHistory(player: Player, system: RatingSystem)
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
@@ -38,10 +39,12 @@ final class AppModel {
     let service: CachedRatingsService
 
     var selectedTab: AppTab = .myCard
-    var watchingBadge: Int = 0
 
-    init() {
-        let mock = AppEnvironment.dataSource == .mock
+    /// Defaults come from launch arguments; previews pass them explicitly since
+    /// they can't set launch arguments.
+    init(dataSource: AppEnvironment.DataSource = AppEnvironment.dataSource,
+         demoSeed: Bool = AppEnvironment.demoSeed) {
+        let mock = dataSource == .mock
         let schema = Schema([WatchedPlayer.self, CachedPayload.self, RecentSearch.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: mock)
         container = try! ModelContainer(for: schema, configurations: [config])
@@ -52,7 +55,7 @@ final class AppModel {
         // No pre-seeded watchlist: the app launches empty. The user searches for
         // their own player (the first one watched becomes primary / "My Card")
         // and looks up tournaments by event ID.
-        if AppEnvironment.demoSeed { seedDemoWatchlist() }
+        if demoSeed { seedDemoWatchlist() }
     }
 
     /// Screenshot/demo only (`-demoSeed`): populate the watchlist with synthetic

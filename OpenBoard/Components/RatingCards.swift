@@ -8,6 +8,8 @@ struct HeroRatingCard: View {
     var delta: Int?
     var sparkline: [Int]
     var peak: Int?
+    /// Shows a chevron when the card is wrapped in a navigation link.
+    var showsDisclosure = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -17,6 +19,7 @@ struct HeroRatingCard: View {
                 if let delta, delta != 0 {
                     DeltaBadge(delta: delta, prominent: true)
                 }
+                if showsDisclosure { DisclosureChevron() }
             }
             HeroClockDigits(value: rating?.value)
             if sparkline.count > 1 {
@@ -68,12 +71,17 @@ struct DualRatingCard: View {
     var published: Int?
     var live: Int?
     var footnote: String?
+    var sparkline: [Int] = []
+    var showsDisclosure = false
 
     private var hasPendingChange: Bool { live != nil && live != published }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionLabel(text: label)
+            HStack {
+                SectionLabel(text: label)
+                if showsDisclosure { DisclosureChevron() }
+            }
             HStack(alignment: .lastTextBaseline, spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("LIVE")
@@ -93,6 +101,11 @@ struct DualRatingCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.4)
                 }
+            }
+            if sparkline.count > 1 {
+                Sparkline(values: sparkline)
+                    .frame(height: 64)
+                    .clipped() // Charts' AreaMark can overshoot its frame; contain it
             }
             if hasPendingChange {
                 Label("Live includes results not yet in the published supplement",
@@ -120,10 +133,14 @@ struct MiniRatingCard: View {
     var label: String
     var rating: Rating?
     var tint: Color = .obTeal
+    var showsDisclosure = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: label)
+            HStack {
+                SectionLabel(text: label)
+                if showsDisclosure { DisclosureChevron() }
+            }
             ClockDigits(value: rating?.value, tint: tint, size: .title)
             Text(footnote)
                 .font(.caption2)
@@ -142,5 +159,16 @@ struct MiniRatingCard: View {
         if let games = rating.games { parts.append("\(games) GAMES") }
         if let floor = rating.floor { parts.append("FLOOR \(floor)") }
         return parts.isEmpty ? " " : parts.joined(separator: " · ")
+    }
+}
+
+// MARK: - Disclosure chevron (tappable cards)
+
+struct DisclosureChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
     }
 }

@@ -122,8 +122,6 @@ struct WatchlistView: View {
     }
 
     private func runCheck() async {
-        let changed = await RefreshScheduler.checkWatchlist(container: model.container,
-                                                            service: model.service)
-        model.watchingBadge = changed ?? 0
+        await RefreshScheduler.checkWatchlist(container: model.container, service: model.service)
     }
 }

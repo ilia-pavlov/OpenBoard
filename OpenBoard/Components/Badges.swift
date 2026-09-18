@@ -6,18 +6,18 @@ struct DeltaBadge: View {
     var delta: Int
     var prominent: Bool = false
 
-    private var tint: Color { delta >= 0 ? .obUp : .obDown }
-    private var arrow: String { delta >= 0 ? "▲" : "▼" }
+    private var tint: Color { delta > 0 ? .obUp : delta < 0 ? .obDown : .secondary }
+    private var text: String { delta > 0 ? "▲ \(delta)" : delta < 0 ? "▼ \(-delta)" : "= 0" }
 
     var body: some View {
-        Text("\(arrow) \(abs(delta))")
+        Text(text)
             .font(prominent ? .title3.weight(.bold) : .caption.weight(.bold))
             .monospacedDigit()
             .foregroundStyle(tint)
             .padding(.horizontal, prominent ? 10 : 6)
             .padding(.vertical, prominent ? 4 : 2)
             .background(tint.opacity(0.14), in: Capsule())
-            .accessibilityLabel(delta >= 0 ? "up \(abs(delta))" : "down \(abs(delta))")
+            .accessibilityLabel(delta > 0 ? "up \(delta)" : delta < 0 ? "down \(-delta)" : "no change")
     }
 }
 
@@ -119,5 +119,40 @@ struct SectionLabel: View {
             .kerning(1.1)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
+    }
+}
+
+// MARK: - Copyable member ID ("ID 12345678 ⧉" — tap copies the number only)
+
+struct CopyableID: View {
+    var id: String
+    var prefix: String = "ID "
+
+    @State private var copied = false
+
+    var body: some View {
+        Button {
+            UIPasteboard.general.string = id
+            copied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                copied = false
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(prefix)\(id)")
+                    .monospacedDigit()
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .imageScale(.small)
+                    .foregroundStyle(copied ? Color.obUp : Color.secondary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.success, trigger: copied) { _, new in new }
+        .accessibilityLabel("Member ID \(id)")
+        .accessibilityHint(copied ? "Copied" : "Double-tap to copy")
+        .accessibilityIdentifier("copy-member-id")
     }
 }
