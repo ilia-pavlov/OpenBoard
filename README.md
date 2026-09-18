@@ -255,7 +255,7 @@ OpenBoard/
   tournaments by event ID. Nothing is pre-seeded.
 - **Background refresh:** `BGAppRefreshTask` (`com.iliapavlov.openboard.refresh`) polls
   followed players ~2×/day; a changed rating fires a local notification
-  (*"Alex's new rating: 420 (+98) 🎉"*) and badges the Watching tab. Manual
+  (*"Alex's new rating: 420 (+98) 🎉"*). Manual
   pull-to-refresh triggers the same check.
 
 ## Liquid Glass design

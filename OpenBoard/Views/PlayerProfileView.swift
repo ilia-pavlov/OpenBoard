@@ -81,10 +81,14 @@ struct PlayerProfileView: View {
                     Text(player.name)
                         .font(.title3.weight(.bold))
                         .lineLimit(2)
-                    Text(subtitle(player))
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 0) {
+                        CopyableID(id: player.id)
+                        Text(subtitle(player))
+                            .lineLimit(1)
+                    }
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
                     ClassChip(rating: player.ratings.regular?.value,
                               stateName: player.ranking?.stateName ?? player.state)
                 }
@@ -109,10 +113,10 @@ struct PlayerProfileView: View {
     }
 
     private func subtitle(_ player: Player) -> String {
-        var parts = ["ID \(player.id)"]
+        var parts: [String] = []
         if let state = player.state { parts.append(state) }
         parts.append("US Chess member")
-        return parts.joined(separator: " · ")
+        return " · " + parts.joined(separator: " · ")
     }
 
     // MARK: - Ratings segment
@@ -123,18 +127,19 @@ struct PlayerProfileView: View {
 
         GlassEffectContainer(spacing: 16) {
             VStack(spacing: 16) {
-                DualRatingCard(published: player.ratings.regular?.value,
-                               live: liveRegular,
-                               footnote: dualFootnote(player.ratings.regular))
-                if player.ratingHistory.count > 1 {
-                    Sparkline(values: player.ratingHistory)
-                        .frame(height: 70)
-                        .clipped() // Charts' AreaMark can overshoot its frame; contain it
-                        .padding(18)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                RatingHistoryLink(player: player, system: .regular) {
+                    DualRatingCard(published: player.ratings.regular?.value,
+                                   live: liveRegular,
+                                   footnote: dualFootnote(player.ratings.regular),
+                                   sparkline: player.ratingHistory,
+                                   showsDisclosure: player.hasHistory(.regular))
                 }
+                .accessibilityIdentifier("profile-rating-card")
                 HStack(spacing: 16) {
-                    MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal)
+                    RatingHistoryLink(player: player, system: .quick) {
+                        MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal,
+                                       showsDisclosure: player.hasHistory(.quick))
+                    }
                     MiniRatingCard(label: "Blitz", rating: player.ratings.blitz, tint: .obTeal)
                 }
                 if hasOnlineRatings(player.ratings) {

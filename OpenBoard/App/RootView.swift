@@ -21,6 +21,8 @@ extension View {
                 PlayerProfileView(memberID: id)
             case .event(let id, let highlight):
                 CrosstableView(eventID: id, highlightMemberID: highlight)
+            case .ratingHistory(let player, let system):
+                RatingHistoryView(player: player, initialSystem: system)
             }
         }
     }
@@ -58,12 +60,11 @@ struct TabRootView: View {
                     WatchlistView().openBoardDestinations()
                 }
             }
-            .badge(model.watchingBadge)
         }
         .onAppear(perform: handleScreenshotRoute)
     }
 
-    /// `-screen profile|event|search|watchlist|events` for demos & screenshots.
+    /// `-screen profile|event|history|search|watchlist|events` for demos & screenshots.
     private func handleScreenshotRoute() {
         guard let screen = AppEnvironment.requestedScreen else { return }
         switch screen {
@@ -76,6 +77,9 @@ struct TabRootView: View {
         case "profile":
             model.selectedTab = .search
             searchPath = [.player(id: AppEnvironment.requestedScreenArg ?? MockRatingsService.samplePlayerID)]
+        case "history":
+            model.selectedTab = .myCard
+            myCardPath = [.ratingHistory(player: MockRatingsService.samplePlayer, system: .regular)]
         case "event":
             model.selectedTab = .events
             eventsPath = [.event(id: MockRatingsService.sampleEventID,
@@ -149,6 +153,9 @@ struct SplitRootView: View {
         case "events": selection = .tab(.events)
         case "watchlist": selection = .tab(.watching)
         case "profile": selection = .watched(MockRatingsService.samplePlayerID)
+        case "history":
+            selection = .tab(.myCard)
+            detailPath = [.ratingHistory(player: MockRatingsService.samplePlayer, system: .regular)]
         case "event":
             selection = .tab(.events)
             detailPath = [.event(id: MockRatingsService.sampleEventID,

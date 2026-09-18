@@ -27,6 +27,11 @@ struct Player: Identifiable, Codable, Sendable, Hashable {
     /// players whose supplement hasn't posted yet — the most recent event's post rating.
     var currentRegular: Int? { ratings.regular?.value ?? events.first?.regular?.post }
     var currentQuick: Int? { ratings.quick?.value ?? events.first?.quick?.post }
+
+    /// True when at least one event carries a post rating for `system` (chart-worthy).
+    func hasHistory(_ system: RatingSystem) -> Bool {
+        events.contains { $0.result(for: system)?.post != nil }
+    }
 }
 
 struct Ratings: Codable, Sendable, Hashable {
@@ -75,6 +80,28 @@ struct EventResult: Identifiable, Codable, Sendable, Hashable {
     var score: String?        // "3.0/5"
     var regular: PrePost?
     var quick: PrePost?
+}
+
+extension EventResult {
+    func result(for system: RatingSystem) -> PrePost? {
+        switch system {
+        case .regular: regular
+        case .quick: quick
+        }
+    }
+}
+
+/// Rating systems with per-event pre/post history (blitz has none in the API).
+enum RatingSystem: String, CaseIterable, Identifiable, Codable, Sendable, Hashable {
+    case regular, quick
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .regular: String(localized: "Regular")
+        case .quick: String(localized: "Quick")
+        }
+    }
 }
 
 struct PrePost: Codable, Sendable, Hashable {

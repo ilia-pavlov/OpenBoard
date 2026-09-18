@@ -30,7 +30,7 @@ enum RefreshScheduler {
     }
 
     static func requestNotificationAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     /// Compares stored vs fetched ratings for every watched player, updates the
@@ -63,12 +63,6 @@ actor WatchlistChecker {
             row.lastKnownQuick = player.currentQuick ?? row.lastKnownQuick
         }
         try? modelContext.save()
-        if changes > 0 {
-            let count = changes
-            Task { @MainActor in
-                try? await UNUserNotificationCenter.current().setBadgeCount(count)
-            }
-        }
         return changes
     }
 

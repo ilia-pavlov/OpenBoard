@@ -66,7 +66,7 @@ struct MyCardView: View {
         let lastEvent = player.events.first
 
         HStack(spacing: 8) {
-            Text("MY CARD · ID \(player.id)")
+            CopyableID(id: player.id)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .kerning(1.2)
@@ -78,12 +78,19 @@ struct MyCardView: View {
 
         GlassEffectContainer(spacing: 16) {
             VStack(spacing: 16) {
-                HeroRatingCard(rating: player.ratings.regular,
-                               delta: lastEvent?.regular?.delta,
-                               sparkline: player.ratingHistory,
-                               peak: player.peakRegular)
+                RatingHistoryLink(player: player, system: .regular) {
+                    HeroRatingCard(rating: player.ratings.regular,
+                                   delta: lastEvent?.regular?.delta,
+                                   sparkline: player.ratingHistory,
+                                   peak: player.peakRegular,
+                                   showsDisclosure: player.hasHistory(.regular))
+                }
+                .accessibilityIdentifier("hero-rating-card")
                 HStack(spacing: 16) {
-                    MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal)
+                    RatingHistoryLink(player: player, system: .quick) {
+                        MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal,
+                                       showsDisclosure: player.hasHistory(.quick))
+                    }
                     MiniRatingCard(label: "Blitz", rating: player.ratings.blitz, tint: .obTeal)
                 }
             }
@@ -210,6 +217,7 @@ struct MyCardView: View {
 
 struct EventResultRow: View {
     var event: EventResult
+    var system: RatingSystem = .regular
 
     var body: some View {
         HStack(spacing: 12) {
@@ -229,7 +237,7 @@ struct EventResultRow: View {
                 .foregroundStyle(.secondary)
             }
             Spacer()
-            if let prePost = event.regular, let pre = prePost.pre, let post = prePost.post {
+            if let prePost = event.result(for: system), let pre = prePost.pre, let post = prePost.post {
                 VStack(alignment: .trailing, spacing: 3) {
                     Text("\(pre) → \(post)")
                         .font(.footnote.weight(.medium))
