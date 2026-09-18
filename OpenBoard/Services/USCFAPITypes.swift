@@ -101,6 +101,30 @@ struct APIMaxRank: Decodable, Sendable {
     var jurisdiction: String?   // nil = national
 }
 
+struct APITopListDefinition: Decodable, Sendable {
+    var id: String
+    var name: String?
+    var ratingSource: String?
+    var minAge: Int?
+    var maxAge: Int?
+    var gender: String?
+    var fideUsaOnly: Bool?
+}
+
+struct APITopList: Decodable, Sendable {
+    struct Player: Decodable, Sendable {
+        var ordinal: Int?
+        var rating: Int?
+        var id: String?
+        var firstName: String?
+        var lastName: String?
+        var stateRep: String?
+    }
+    var topPlayerReportDefinitionId: String?
+    var reportDate: String?
+    var topPlayers: [Player]?
+}
+
 // MARK: - Mapping to domain
 
 enum USCFMapper {
@@ -194,6 +218,29 @@ enum USCFMapper {
         if let firstPre = chronological.first?.regular?.pre { series.append(firstPre) }
         series.append(contentsOf: chronological.compactMap { $0.regular?.post })
         return series
+    }
+
+    /// Regular/Quick/Blitz over-the-board lists for US players; online and
+    /// correspondence lists and "any federation" duplicates are skipped.
+    static func topListDefinitions(_ api: [APITopListDefinition]) -> [TopListDefinition] {
+        api.compactMap { d in
+            guard d.fideUsaOnly != false,
+                  let rating = d.ratingSource.flatMap(TopListRating.init(rawValue:)) else { return nil }
+            return TopListDefinition(id: d.id, name: d.name ?? d.id, rating: rating,
+                                     minAge: d.minAge, maxAge: d.maxAge, isWomen: d.gender == "Female")
+        }
+    }
+
+    static func topList(_ api: APITopList, definition: TopListDefinition) -> TopList {
+        TopList(
+            definition: definition,
+            reportDate: date(api.reportDate),
+            entries: (api.topPlayers ?? []).compactMap { p in
+                guard let id = p.id, let rank = p.ordinal, let rating = p.rating else { return nil }
+                return TopListEntry(id: id, rank: rank, name: name(first: p.firstName, last: p.lastName),
+                                    state: p.stateRep, rating: rating)
+            }
+        )
     }
 
     static func summary(member: APIMember) -> PlayerSummary {

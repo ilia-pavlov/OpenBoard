@@ -118,6 +118,19 @@ final class CachedRatingsService: RatingsProviding, Sendable {
         try await cachedFetch(key: "event-\(id)") { try await self.upstream.event(id: id) }
     }
 
+    /// Top lists change monthly; half a day keeps them fresh without refetching all ~70.
+    private static let topListTTL: TimeInterval = 12 * 60 * 60
+
+    func topListDefinitions() async throws -> [TopListDefinition] {
+        try await cachedFetch(key: "toplists", ttl: Self.topListTTL) { try await self.upstream.topListDefinitions() }
+    }
+
+    func topList(_ definition: TopListDefinition) async throws -> TopList {
+        try await cachedFetch(key: "toplist-\(definition.id)", ttl: Self.topListTTL) {
+            try await self.upstream.topList(definition)
+        }
+    }
+
     /// Last stored copy regardless of freshness, plus its timestamp — for
     /// instant paint and the "showing cached from 3:12 PM" error state.
     func cachedPlayer(id: String) async -> (Player, Date)? {
@@ -128,9 +141,9 @@ final class CachedRatingsService: RatingsProviding, Sendable {
         await cache.read(ChessEvent.self, key: "event-\(id)").map { ($0.value, $0.updatedAt) }
     }
 
-    private func cachedFetch<T: Codable & Sendable>(key: String,
+    private func cachedFetch<T: Codable & Sendable>(key: String, ttl: TimeInterval = AppEnvironment.cacheTTL,
                                                     fetch: @Sendable () async throws -> T) async throws -> T {
-        if let entry = await cache.read(T.self, key: key), entry.isFresh {
+        if let entry = await cache.read(T.self, key: key, ttl: ttl), entry.isFresh {
             return entry.value
         }
         do {

@@ -142,4 +142,31 @@ final class OpenBoardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["495 E Main St, Somerville, NJ 08876"].exists, "venue address")
         XCTAssertTrue(app.buttons["Directions"].exists || app.links["Directions"].exists)
     }
+
+    /// Search → Top 100 → an age list → a player's profile, which shows their badges.
+    @MainActor
+    func testTopListsBrowseToProfile() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-mock"]
+        app.launch()
+
+        app.tabBars.buttons["Search"].firstMatch.tap()
+        let card = app.buttons["browse-top-100"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        card.tap()
+
+        XCTAssertTrue(app.buttons["Overall"].firstMatch.waitForExistence(timeout: 5), "age filter")
+        app.buttons["Overall"].firstMatch.tap()
+        app.buttons["Age 9"].firstMatch.tap()
+
+        let alex = app.buttons["toplist-90000001"].firstMatch
+        var tries = 0
+        while !alex.isHittable && tries < 8 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(alex.waitForExistence(timeout: 5), "sample player is #37 on the Age 9 list")
+        alex.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["watch-toggle"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["top-badges"].firstMatch.waitForExistence(timeout: 5),
+                      "profile shows the Top 100 badge")
+    }
 }

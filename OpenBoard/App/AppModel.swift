@@ -9,6 +9,8 @@ enum Destination: Hashable {
     case ratingHistory(player: Player, system: RatingSystem)
     case upcomingTournament(id: String)
     case majorEvent(MajorEvent)
+    case topLists
+    case topList(id: String, highlight: String?)
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
@@ -41,6 +43,7 @@ final class AppModel {
     let service: CachedRatingsService
     let tournaments: any TournamentsProviding
     let location: LocationProvider
+    let topLists = TopListsIndex()
 
     var selectedTab: AppTab = .myCard
 

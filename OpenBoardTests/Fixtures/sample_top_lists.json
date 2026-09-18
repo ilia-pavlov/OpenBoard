@@ -1,0 +1,63 @@
+{
+ "items": [
+  {
+   "id": "QuickUnder13",
+   "name": "Quick Under Age 13",
+   "maxAge": 12,
+   "ratingSource": "Q",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "Regular50Plus",
+   "name": "Age 50 and Over",
+   "minAge": 50,
+   "ratingSource": "R",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "Regular8",
+   "name": "Age 8",
+   "minAge": 8,
+   "maxAge": 8,
+   "ratingSource": "R",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "Regular8AnyFed",
+   "name": "Age 8 (regardless of residence or federation)",
+   "minAge": 8,
+   "maxAge": 8,
+   "ratingSource": "R",
+   "fideUsaOnly": false
+  },
+  {
+   "id": "RegularOverall",
+   "name": "Overall",
+   "ratingSource": "R",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "WomensRegular",
+   "name": "Women",
+   "ratingSource": "R",
+   "gender": "Female",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "WomensRegular8",
+   "name": "Girls Age 8",
+   "minAge": 8,
+   "maxAge": 8,
+   "ratingSource": "R",
+   "gender": "Female",
+   "fideUsaOnly": true
+  },
+  {
+   "id": "Blitz50PlusAnyFed",
+   "name": "Blitz Age 50 and over (regardless of residence or federation)",
+   "minAge": 50,
+   "ratingSource": "B",
+   "fideUsaOnly": false
+  }
+ ]
+}

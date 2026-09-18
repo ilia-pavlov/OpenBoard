@@ -78,9 +78,12 @@ struct WatchlistView: View {
                                 .foregroundStyle(Color.obGold)
                         }
                     }
-                    Text(Format.daysAgo(row.lastRatedDate))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(Format.daysAgo(row.lastRatedDate))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        PlayerTopBadge(memberID: row.memberID)
+                    }
                 }
                 Spacer()
                 ClockDigits(value: row.lastKnownRegular,

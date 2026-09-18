@@ -33,6 +33,52 @@ struct MockRatingsService: RatingsProviding {
         return Self.sampleEvent
     }
 
+    // MARK: - Top 100 lists (synthetic)
+
+    static let topListDefinitionsSample: [TopListDefinition] = [
+        TopListDefinition(id: "Regular7andUnder", name: "Age 7", rating: .regular, minAge: nil, maxAge: 7, isWomen: false),
+        TopListDefinition(id: "Regular8", name: "Age 8", rating: .regular, minAge: 8, maxAge: 8, isWomen: false),
+        TopListDefinition(id: "Regular9", name: "Age 9", rating: .regular, minAge: 9, maxAge: 9, isWomen: false),
+        TopListDefinition(id: "Regular10", name: "Age 10", rating: .regular, minAge: 10, maxAge: 10, isWomen: false),
+        TopListDefinition(id: "RegularOverall", name: "Overall", rating: .regular, minAge: nil, maxAge: nil, isWomen: false),
+        TopListDefinition(id: "WomensRegular8", name: "Girls Age 8", rating: .regular, minAge: 8, maxAge: 8, isWomen: true),
+        TopListDefinition(id: "WomensRegular9", name: "Girls Age 9", rating: .regular, minAge: 9, maxAge: 9, isWomen: true),
+        TopListDefinition(id: "WomensRegular", name: "Women", rating: .regular, minAge: nil, maxAge: nil, isWomen: true),
+        TopListDefinition(id: "QuickUnder13", name: "Under Age 13", rating: .quick, minAge: nil, maxAge: 12, isWomen: false),
+        TopListDefinition(id: "BlitzUnder13", name: "Under Age 13", rating: .blitz, minAge: nil, maxAge: 12, isWomen: false),
+    ]
+
+    /// Sample players placed on lists so badges show up in demo mode.
+    private static let topListPlacements: [String: [(rank: Int, id: String, name: String, state: String?)]] = [
+        "Regular9": [(37, samplePlayerID, "Alex Rivera", "NJ")],
+        "Regular8": [(48, "90000010", "Ava Sterling", nil)],
+        "WomensRegular8": [(12, "90000010", "Ava Sterling", nil)],
+        "WomensRegular9": [(64, "90000011", "Maya Brooks", nil)],
+    ]
+
+    func topListDefinitions() async throws -> [TopListDefinition] {
+        Self.topListDefinitionsSample
+    }
+
+    func topList(_ definition: TopListDefinition) async throws -> TopList {
+        try await Task.sleep(for: .milliseconds(150))
+        let first = ["Ethan", "Sofia", "Noah", "Mia", "Leo", "Aria", "Lucas", "Zoe", "Arjun", "Emma"]
+        let last = ["Chen", "Patel", "Kim", "Garcia", "Nguyen", "Cohen", "Singh", "Lopez", "Park", "Rossi"]
+        let states = ["NY", "CA", "TX", "NJ", "FL", "IL", "WA", "MA", "PA", "GA"]
+        let placed = Self.topListPlacements[definition.id] ?? []
+        let top = 2000 - (definition.maxAge.map { (18 - min($0, 18)) * 60 } ?? 0)
+        let entries = (1...100).map { rank -> TopListEntry in
+            if let p = placed.first(where: { $0.rank == rank }) {
+                return TopListEntry(id: p.id, rank: rank, name: p.name, state: p.state, rating: top - rank * 8)
+            }
+            let i = (rank * 7 + definition.id.count) % 10
+            return TopListEntry(id: String(format: "9%07d", rank * 31 + definition.id.count),
+                                rank: rank, name: "\(first[i]) \(last[(rank + i) % 10])",
+                                state: states[(rank + definition.id.count) % 10], rating: top - rank * 8)
+        }
+        return TopList(definition: definition, reportDate: Self.date(2026, 9, 1), entries: entries)
+    }
+
     // MARK: - Seed: synthetic primary player
 
     static let samplePlayer = Player(
