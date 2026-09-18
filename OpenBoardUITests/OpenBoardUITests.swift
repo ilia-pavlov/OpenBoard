@@ -98,4 +98,29 @@ final class OpenBoardUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Rating History"].waitForExistence(timeout: 5),
                       "rating card should open the rival's rating history")
     }
+
+    /// Long section names are chosen from a sheet instead of a truncating segmented control.
+    @MainActor
+    func testTournamentSectionPicker() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-mock", "-screen", "event"]
+        app.launch()
+
+        // Opens on the followed player's section.
+        let followed = app.descendants(matching: .any)["standing-90000001"].firstMatch
+        XCTAssertTrue(followed.waitForExistence(timeout: 5), "crosstable should load")
+
+        let menu = app.descendants(matching: .any)["section-menu"].firstMatch
+        XCTAssertTrue(menu.exists)
+        menu.tap()
+
+        let option = app.descendants(matching: .any)["section-option-1"].firstMatch
+        XCTAssertTrue(option.waitForExistence(timeout: 5), "section sheet should list sections")
+        XCTAssertTrue(app.staticTexts["Section 2 Open U1200 G/45;d5 (K-12)"].exists,
+                      "full section name should be shown")
+        option.tap()
+
+        let otherSection = app.descendants(matching: .any)["standing-90000020"].firstMatch
+        XCTAssertTrue(otherSection.waitForExistence(timeout: 5), "picking a section shows its standings")
+    }
 }

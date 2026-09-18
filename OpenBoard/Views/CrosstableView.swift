@@ -9,6 +9,7 @@ struct CrosstableView: View {
     @State private var state: Loadable<ChessEvent> = .idle
     @State private var sectionIndex = 0
     @State private var expanded: Set<String> = []
+    @State private var showingSections = false
 
     var body: some View {
         Group {
@@ -34,7 +35,7 @@ struct CrosstableView: View {
             }
         }
         .background(Color.obBackground)
-        .navigationTitle(state.value?.name ?? "Crosstable")
+        .navigationTitle("Tournament") // full name wraps in the header below
         .navigationBarTitleDisplayMode(.inline)
         .task(id: eventID) { await load(force: false) }
         .refreshable { await load(force: true) }
@@ -48,14 +49,9 @@ struct CrosstableView: View {
             header(event)
 
             if event.sections.count > 1 {
-                Picker("Section", selection: $sectionIndex) {
-                    ForEach(Array(event.sections.enumerated()), id: \.offset) { index, section in
-                        Text(section.name).tag(index)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
+                sectionMenu(event)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 4)
             }
 
             if sizeClass == .regular {
@@ -76,20 +72,102 @@ struct CrosstableView: View {
     }
 
     private func header(_ event: ChessEvent) -> some View {
-        HStack {
-            Text("EVENT \(eventID)\(event.date.map { " · RATED \(Format.eventDate($0).uppercased())" } ?? "")")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-                .kerning(1)
-            Spacer()
+        let playerCount = event.sections.reduce(0) { $0 + $1.players.count }
+        let meta = [event.date.map { "Rated \(Format.eventDate($0))" },
+                    "\(playerCount) \(playerCount == 1 ? "player" : "players")"]
+            .compactMap { $0 }.joined(separator: " · ")
+
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(event.name)
+                .font(.title3.weight(.bold))
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) {
+                    Text(meta + " · ")
+                    CopyableID(id: eventID, prefix: "Event ")
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(meta)
+                    CopyableID(id: eventID, prefix: "Event ")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+    }
+
+    private func highlightSectionIndex(_ event: ChessEvent) -> Int? {
+        guard let id = highlightMemberID else { return nil }
+        return event.sections.firstIndex { $0.players.contains { $0.id == id } }
+    }
+
+    /// Full-width selector showing the current section's whole name and
+    /// "Section 2 of 5"; tapping opens a sheet listing every section.
+    /// Swiping the standings still pages between sections on iPhone.
+    private func sectionMenu(_ event: ChessEvent) -> some View {
+        let current = event.sections[safe: sectionIndex]
+        let isHighlightSection = sectionIndex == highlightSectionIndex(event)
+
+        return Button {
+            showingSections = true
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Section \(sectionIndex + 1) of \(event.sections.count)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .kerning(1)
+                    HStack(spacing: 6) {
+                        Text(current?.name ?? "")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                        if isHighlightSection {
+                            Image(systemName: "star.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Color.obGold)
+                        }
+                    }
+                }
+                Spacer(minLength: 8)
+                Text("\(current?.players.count ?? 0) players")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .obCard(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Section \(sectionIndex + 1) of \(event.sections.count): \(current?.name ?? "")")
+        .accessibilityHint("Choose a section")
+        .accessibilityIdentifier("section-menu")
+        .sensoryFeedback(.selection, trigger: sectionIndex)
+        .sheet(isPresented: $showingSections) {
+            SectionPickerSheet(sections: event.sections,
+                               selection: $sectionIndex,
+                               highlightIndex: highlightSectionIndex(event))
+        }
     }
 
     private func standingsList(_ section: EventSection) -> some View {
-        ScrollViewReader { proxy in
+        let estimates = RoundRatingEstimator.estimate(section)
+        let byRank = Dictionary(section.players.map { ($0.rank, $0) }, uniquingKeysWith: { first, _ in first })
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 10) {
                     ForEach(section.players) { standing in
@@ -98,7 +176,8 @@ struct CrosstableView: View {
                             isWatched: model.watchedIDs.contains(standing.id),
                             isHighlight: standing.id == highlightMemberID,
                             isExpanded: expanded.contains(standing.id),
-                            opponentName: { rank in section.players.first { $0.rank == rank }?.name },
+                            opponent: { byRank[$0] },
+                            estimates: estimates,
                             onTap: { toggle(standing.id) }
                         )
                         .id(standing.id)
@@ -158,6 +237,61 @@ struct CrosstableView: View {
     }
 }
 
+// MARK: - Section picker sheet
+
+struct SectionPickerSheet: View {
+    let sections: [EventSection]
+    @Binding var selection: Int
+    var highlightIndex: Int?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(Array(sections.enumerated()), id: \.offset) { index, section in
+                Button {
+                    selection = index
+                    dismiss()
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(section.name)
+                                .font(.body.weight(index == selection ? .semibold : .regular))
+                                .foregroundStyle(.primary)
+                            HStack(spacing: 6) {
+                                Text("\(section.players.count) players")
+                                if index == highlightIndex {
+                                    Label("Followed player", systemImage: "star.fill")
+                                        .foregroundStyle(Color.obGold)
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if index == selection {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.obGold)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(index == selection ? .isSelected : [])
+                .accessibilityIdentifier("section-option-\(index)")
+            }
+            .navigationTitle("Sections")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
 // MARK: - Standing row
 
 struct StandingRow: View {
@@ -165,8 +299,10 @@ struct StandingRow: View {
     var isWatched: Bool
     var isHighlight: Bool
     var isExpanded: Bool
-    /// Resolves an opponent's name from their finishing rank within this section.
-    var opponentName: (Int) -> String?
+    /// Resolves an opponent from their finishing rank within this section.
+    var opponent: (Int) -> Standing?
+    /// Estimated per-round rating changes for everyone in the section.
+    var estimates: RoundRatingEstimator.Estimates
     var onTap: () -> Void
 
     private var placeColor: Color {
@@ -224,11 +360,17 @@ struct StandingRow: View {
                             .foregroundStyle(Color.obGold)
                     }
                 }
-                HStack(spacing: 10) {
-                    prePostText("R", standing.regular)
-                    prePostText("Q", standing.quick)
+                // Side by side when they fit, otherwise stacked — never truncated.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        prePostText("R", standing.regular)
+                        prePostText("Q", standing.quick)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        prePostText("R", standing.regular)
+                        prePostText("Q", standing.quick)
+                    }
                 }
-                .minimumScaleFactor(0.75)
             }
 
             Spacer(minLength: 8)
@@ -262,6 +404,13 @@ struct StandingRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 ForEach(standing.rounds, id: \.round) { gameRow($0) }
+                if let total = eventDelta, hasEstimates {
+                    Text("≈ Estimated per game from the official \(estimates.system.title) change (\(total.signedString)). US Chess only publishes the event total.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                }
             }
             NavigationLink(value: Destination.player(id: standing.id)) {
                 HStack(spacing: 4) {
@@ -277,32 +426,90 @@ struct StandingRow: View {
         }
     }
 
+    private var eventDelta: Int? {
+        (estimates.system == .regular ? standing.regular : standing.quick)?.delta
+    }
+
+    private var hasEstimates: Bool { estimates.byMember[standing.id] != nil }
+
     private func gameRow(_ outcome: RoundOutcome) -> some View {
-        HStack(spacing: 12) {
+        let opponent = outcome.opponentRank.flatMap(opponent)
+        let mine = estimates.change(for: standing.id, round: outcome.round)
+        let theirs = opponent.flatMap { estimates.change(for: $0.id, round: outcome.round) }
+
+        return HStack(spacing: 12) {
             resultChip(outcome.symbol)
-            Text("Round \(outcome.round)")
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text("Round \(outcome.round)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    if let color = outcome.color, !color.isEmpty, outcome.symbol != "B" {
+                        Text(color.uppercased())
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text(opponentText(outcome, opponent))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if let rating = opponent.flatMap(opponentRating) {
+                        Text("(\(rating))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .layoutPriority(1)
+                    }
+                }
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 66, alignment: .leading)
-            Text(opponentText(outcome))
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-            Spacer()
-            if let color = outcome.color, outcome.symbol != "B" {
-                Text(color.uppercased())
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.tertiary)
+            }
+            Spacer(minLength: 8)
+            if mine != nil || theirs != nil {
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let mine {
+                        estimateText(mine)
+                            .font(.caption.weight(.bold))
+                    }
+                    if let theirs, let opponent {
+                        HStack(spacing: 3) {
+                            Text(opponent.firstName)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            estimateText(theirs)
+                        }
+                        .font(.caption2.weight(.semibold))
+                    }
+                }
+                .fixedSize()
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Round \(outcome.round), \(resultWord(outcome.symbol)) \(opponentText(outcome))")
+        .accessibilityLabel(accessibilityText(outcome, opponent: opponent, mine: mine, theirs: theirs))
     }
 
-    private func opponentText(_ outcome: RoundOutcome) -> String {
+    private func estimateText(_ change: Int) -> some View {
+        Text("≈ \(change.signedString)")
+            .monospacedDigit()
+            .foregroundStyle(change > 0 ? Color.obUp : change < 0 ? Color.obDown : Color.secondary)
+    }
+
+    private func opponentRating(_ opponent: Standing) -> Int? {
+        let result = estimates.system == .regular ? opponent.regular : opponent.quick
+        return result?.pre ?? result?.post
+    }
+
+    private func opponentText(_ outcome: RoundOutcome, _ opponent: Standing?) -> String {
         if outcome.symbol == "B" { return "Bye" }
-        let name = outcome.opponentName ?? outcome.opponentRank.flatMap(opponentName)
+        let name = outcome.opponentName ?? opponent?.name
         return name.map { "vs \($0)" } ?? "vs opponent"
+    }
+
+    private func accessibilityText(_ outcome: RoundOutcome, opponent: Standing?,
+                                   mine: Int?, theirs: Int?) -> String {
+        var text = "Round \(outcome.round), \(resultWord(outcome.symbol)) \(opponentText(outcome, opponent))"
+        if let mine { text += ", about \(mine.signedString) for \(standing.firstName)" }
+        if let theirs, let opponent { text += ", about \(theirs.signedString) for \(opponent.firstName)" }
+        return text
     }
 
     private func resultChip(_ symbol: String) -> some View {
