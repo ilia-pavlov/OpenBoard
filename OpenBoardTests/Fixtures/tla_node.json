@@ -1,0 +1,139 @@
+{
+ "title": [
+  {
+   "value": "DCA  Somerset County Scholastic (K-8 Grades) September 20th, 2026"
+  }
+ ],
+ "body": [
+  {
+   "value": "<p><strong>USCF Rated Scholastic tournament open to K-8 graders</strong></p><p><strong>Tournament Dates:</strong></p><p>September September 20th, 2026</p><p><strong>Tournament Format: Swiss</strong></p><p><strong>Sections Under 500 / Under 1000/ Under 1500</strong></p><p><strong>No of rounds : 4</strong></p><p><strong>Time Control:&nbsp;G/25; d/5</strong></p><p><strong>Prizes and Awards</strong>&nbsp;</p><ul><li data-list-item-id=\"e662026e295e05a4c89cd2ed1b01ed550\"><strong>\ud83c\udfc6 1st Place&nbsp;</strong>Trophy in each Section</li><li data-list-item-id=\"e0d108629716b25f4c5b04697012dc659\"><strong>\ud83c\udfc6</strong>&nbsp;<strong>2nd&nbsp;Place&nbsp;</strong>Trophy in each Section</li><li data-list-item-id=\"e601ca37137b9fc849be5bb4cdbac7b11\"><strong>\ud83c\udfc6&nbsp;3rd&nbsp;Place&nbsp;</strong>Trophy in each Section</li><li data-list-item-id=\"e003462ed90c53dc97741caba85c5100f\"><strong>\ud83c\udfc6&nbsp;Top K-3&nbsp;</strong>Trophy in each Section</li></ul><div>\ud83e\udd49Medals for all players who tie for 3rd place</div><p><strong>Registration fee - $40</strong></p><p><strong>First round starts at</strong> <strong>1.30 pm and ASAP (Please be there by 1.15pm)</strong></p><p><strong>Location - Knights of Columbus, Somerville (495 E Main St, Somerville, NJ 08876)</strong><br>&nbsp;</p><p><strong>Registration Link -</strong><a href=\"https://forms.gle/7qqwd7Bpb6AH19mMA\"> Register here</a>&nbsp;<br>(Registration will be closed once reached the capacity)</p><p>We appreciate your cooperation and look forward to seeing you there!<br>We run 2 QUADS and 1 Scholastic(K-8) tournaments each month</p><p><strong>For more information &amp; Questions please contact DCA via dashchessacademy@dashnmore.com</strong></p>",
+   "format": "basic_html",
+   "processed": "<p><strong>USCF Rated Scholastic tournament open to K-8 graders</strong></p><p><strong>Tournament Dates:</strong></p><p>September September 20th, 2026</p><p><strong>Tournament Format: Swiss</strong></p><p><strong>Sections Under 500 / Under 1000/ Under 1500</strong></p><p><strong>No of rounds : 4</strong></p><p><strong>Time Control:&nbsp;G/25; d/5</strong></p><p><strong>Prizes and Awards</strong>&nbsp;</p><ul><li><strong>\ud83c\udfc6 1st Place&nbsp;</strong>Trophy in each Section</li><li><strong>\ud83c\udfc6</strong>&nbsp;<strong>2nd&nbsp;Place&nbsp;</strong>Trophy in each Section</li><li><strong>\ud83c\udfc6&nbsp;3rd&nbsp;Place&nbsp;</strong>Trophy in each Section</li><li><strong>\ud83c\udfc6&nbsp;Top K-3&nbsp;</strong>Trophy in each Section</li></ul><div>\ud83e\udd49Medals for all players who tie for 3rd place</div><p><strong>Registration fee - $40</strong></p><p><strong>First round starts at</strong> <strong>1.30 pm and ASAP (Please be there by 1.15pm)</strong></p><p><strong>Location - Knights of Columbus, Somerville (495 E Main St, Somerville, NJ 08876)</strong><br>&nbsp;</p><p><strong>Registration Link -</strong><a href=\"https://forms.gle/7qqwd7Bpb6AH19mMA\"> Register here</a>&nbsp;<br>(Registration will be closed once reached the capacity)</p><p>We appreciate your cooperation and look forward to seeing you there!<br>We run 2 QUADS and 1 Scholastic(K-8) tournaments each month</p><p><strong>For more information &amp; Questions please contact DCA via dashchessacademy@dashnmore.com</strong></p>",
+   "summary": ""
+  }
+ ],
+ "field_affiliate_contact": [
+  {
+   "target_id": 3158991,
+   "target_type": "civicrm_contact",
+   "target_uuid": null,
+   "url": "/civicrm-contact/3158991"
+  }
+ ],
+ "field_banner_line": [],
+ "field_bullet_ad": [],
+ "field_bullet_ad_cl": [],
+ "field_bullet_ad_clk": [],
+ "field_bullet_ad_for_clk": [],
+ "field_bullet_ad_states": [],
+ "field_chess_life_editions": [],
+ "field_chess_life_kids_editions": [],
+ "field_event_address": [
+  {
+   "langcode": null,
+   "country_code": "US",
+   "administrative_area": "NJ",
+   "locality": "Somerville",
+   "dependent_locality": null,
+   "postal_code": "08876",
+   "sorting_code": null,
+   "address_line1": "495 E Main St",
+   "address_line2": "",
+   "address_line3": ""
+  }
+ ],
+ "field_event_dates": [
+  {
+   "value": "2026-09-20",
+   "end_value": "2026-09-20",
+   "rrule": null,
+   "timezone": "America/Chicago",
+   "infinite": false
+  }
+ ],
+ "field_event_location_name": [
+  {
+   "value": "Knights of Columbus, Somerville"
+  }
+ ],
+ "field_fide_rated": [
+  {
+   "value": false
+  }
+ ],
+ "field_geofield": [
+  {
+   "value": "POINT (-74.590025 40.564642)",
+   "geo_type": "Point",
+   "lat": 40.564642,
+   "lon": -74.590025,
+   "left": -74.590025,
+   "top": 40.564642,
+   "right": -74.590025,
+   "bottom": 40.564642,
+   "geohash": "dr4yy8t4nmq4",
+   "latlon": "40.564642,-74.590025"
+  }
+ ],
+ "field_gp_points": [],
+ "field_handicap_accessible": [
+  {
+   "value": false
+  }
+ ],
+ "field_mailing_status": [
+  {
+   "value": "finished"
+  }
+ ],
+ "field_number_of_sections": [],
+ "field_online_event": [
+  {
+   "value": false
+  }
+ ],
+ "field_organizer_email_address": [
+  {
+   "value": "dashchessacademy@dashnmore.com"
+  }
+ ],
+ "field_organizer_name": [
+  {
+   "value": "Dash Chess Academy"
+  }
+ ],
+ "field_organizer_phone_number": [
+  {
+   "value": "6462385213"
+  }
+ ],
+ "field_organizer_website": [
+  {
+   "uri": "https://sites.google.com/dashnmore.com/dash-chessacademy/home",
+   "title": "",
+   "options": []
+  }
+ ],
+ "field_published_date": [
+  {
+   "value": "2026-09-10T09:48:22-05:00"
+  }
+ ],
+ "field_residency_restriction": [
+  {
+   "value": false
+  }
+ ],
+ "field_special_requests": [
+  {
+   "value": "use the middle door to enter the building"
+  }
+ ],
+ "field_submission_id": [],
+ "field_tla_type": [
+  {
+   "value": "online"
+  }
+ ],
+ "field_total_overall_prize_fund": []
+}

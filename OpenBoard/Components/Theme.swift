@@ -59,6 +59,21 @@ enum Format {
     static func timeOfDay(_ date: Date) -> String {
         date.formatted(date: .omitted, time: .shortened)
     }
+
+    /// "Fri, Sep 18 – Sun, Sep 20" (the year is added when it isn't this year).
+    static func dateRange(_ start: Date, _ end: Date) -> String {
+        let thisYear = Calendar.current.isDate(start, equalTo: .now, toGranularity: .year)
+        let style = Date.FormatStyle.dateTime.weekday(.abbreviated).month(.abbreviated).day()
+        let endStyle = thisYear ? style : style.year()
+        return "\(start.formatted(style)) – \(end.formatted(endStyle))"
+    }
+
+    /// "6462385213" → "(646) 238-5213"; anything else unchanged.
+    static func phone(_ digits: String) -> String {
+        let d = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+        guard d.count == 10 else { return digits }
+        return "(\(d.prefix(3))) \(d.dropFirst(3).prefix(3))-\(d.suffix(4))"
+    }
 }
 
 // MARK: - Reusable card chrome

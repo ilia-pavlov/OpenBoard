@@ -1,38 +1,38 @@
 import SwiftUI
 import SwiftData
 
-/// Events tab: quick door into crosstables — the primary player's recent
-/// events plus direct event-ID entry.
+/// Events tab: upcoming tournaments to play (near you or major events), and
+/// results — the primary player's recent events plus direct event-ID entry.
 struct EventsView: View {
+    enum Mode: String, CaseIterable, Identifiable {
+        case upcoming = "Upcoming"
+        case results = "Results"
+        var id: Self { self }
+    }
+
     @Environment(AppModel.self) private var model
     @Query(filter: #Predicate<WatchedPlayer> { $0.isPrimary },
            sort: \WatchedPlayer.sortOrder) private var primaries: [WatchedPlayer]
     @State private var eventIDInput = ""
     @State private var state: Loadable<Player> = .idle
+    @State private var mode: Mode = .upcoming
 
     private var primaryMemberID: String? { primaries.first?.memberID }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                idEntryCard
-
-                switch state {
-                case .idle, .loading:
-                    if primaryMemberID != nil {
-                        SkeletonCard(height: 64)
-                        SkeletonCard(height: 64)
-                    }
-                case .loaded(let player):
-                    recentEvents(player)
-                case .failed(let message, let cached, let cachedAt):
-                    ErrorCard(message: message, cachedAt: cachedAt) {
-                        Task { await load(force: true) }
-                    }
-                    if let cached { recentEvents(cached) }
+                Picker("Events", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
                 }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("events-mode")
 
-                joinCard
+                if mode == .upcoming {
+                    UpcomingTournamentsSection()
+                } else {
+                    resultsContent
+                }
             }
             .padding(16)
         }
@@ -40,6 +40,28 @@ struct EventsView: View {
         .navigationTitle("Events")
         .task(id: primaryMemberID) { await load(force: false) }
         .refreshable { await load(force: true) }
+    }
+
+    @ViewBuilder
+    private var resultsContent: some View {
+        idEntryCard
+
+        switch state {
+        case .idle, .loading:
+            if primaryMemberID != nil {
+                SkeletonCard(height: 64)
+                SkeletonCard(height: 64)
+            }
+        case .loaded(let player):
+            recentEvents(player)
+        case .failed(let message, let cached, let cachedAt):
+            ErrorCard(message: message, cachedAt: cachedAt) {
+                Task { await load(force: true) }
+            }
+            if let cached { recentEvents(cached) }
+        }
+
+        joinCard
     }
 
     // MARK: - Event-ID entry

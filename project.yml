@@ -43,6 +43,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
+        NSLocationWhenInUseUsageDescription: OpenBoard uses your location to find US Chess tournaments near you.
   OpenBoardTests:
     type: bundle.unit-test
     platform: iOS

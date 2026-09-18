@@ -23,6 +23,10 @@ extension View {
                 CrosstableView(eventID: id, highlightMemberID: highlight)
             case .ratingHistory(let player, let system):
                 RatingHistoryView(player: player, initialSystem: system)
+            case .upcomingTournament(let id):
+                TournamentDetailView(id: id)
+            case .majorEvent(let event):
+                MajorEventView(event: event)
             }
         }
     }

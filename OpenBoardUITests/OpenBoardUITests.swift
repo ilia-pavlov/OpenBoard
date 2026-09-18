@@ -123,4 +123,23 @@ final class OpenBoardUITests: XCTestCase {
         let otherSection = app.descendants(matching: .any)["standing-90000020"].firstMatch
         XCTAssertTrue(otherSection.waitForExistence(timeout: 5), "picking a section shows its standings")
     }
+
+    /// Events → Upcoming lists nearby tournaments; a tournament shows location and registration.
+    @MainActor
+    func testUpcomingTournamentDetail() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-mock"]
+        app.launch()
+
+        app.tabBars.buttons["Events"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Near Somerville, NJ"].waitForExistence(timeout: 5))
+
+        let row = app.buttons["upcoming-/sample-saturday-quads"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "nearby tournaments should load")
+        row.tap()
+
+        XCTAssertTrue(app.buttons["tournament-register"].waitForExistence(timeout: 5), "register link")
+        XCTAssertTrue(app.staticTexts["495 E Main St, Somerville, NJ 08876"].exists, "venue address")
+        XCTAssertTrue(app.buttons["Directions"].exists || app.links["Directions"].exists)
+    }
 }

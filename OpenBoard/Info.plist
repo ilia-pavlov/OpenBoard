@@ -26,6 +26,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>OpenBoard uses your location to find US Chess tournaments near you.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
