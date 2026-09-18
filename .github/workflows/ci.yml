@@ -40,7 +40,7 @@ jobs:
             target: OpenBoardUITests
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode ${{ env.XCODE_VERSION }}
         run: |
@@ -97,11 +97,14 @@ jobs:
           list-suites: all
           list-tests: all
           max-annotations: 50
+          # false = publish a separate check run (with annotations) instead of
+          # only writing to the job summary, which is v3's default.
+          use-actions-summary: false
 
       # Always: the .xcresult (open in Xcode), full logs, JSON, results.md, junit.xml.
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}-results
           path: |

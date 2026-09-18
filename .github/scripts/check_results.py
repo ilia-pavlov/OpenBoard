@@ -5,7 +5,8 @@ Usage: check_results.py <summary.json> <tests.json> <job name>
 
 - Prints every test, grouped by suite: ✔ passed, ✘ failed, ⚠ flaky, ↷ skipped.
 - Writes results.md (also appended to the GitHub job summary) and junit.xml
-  for dorny/test-reporter (per-test check run + annotations on source lines).
+  for dorny/test-reporter, which publishes a separate check run with every
+  test and failure annotations on the source lines.
 - Flaky = failed, then passed on a retry: the job stays green, but each one gets
   a GitHub warning annotation and flaky.txt is written.
 - Fails when any test failed after retries, or when no tests ran (e.g. a wrong
@@ -156,7 +157,11 @@ def main(summary_path, tests_path, job_name):
         md += ["**Flaky tests** (failed, then passed on a retry)", ""]
         md += [f"- `{c['suite']}/{c['name']}` — {retries_text(c['retries'])}" for c in flaky]
         md.append("")
-    text = "\n".join(md)  # the full per-test table comes from dorny/test-reporter
+    md += [f"<details><summary>All {len(cases)} tests</summary>", "",
+           "| | Suite | Test | Time |", "|:-:|---|---|--:|"]
+    md += [f"| {icon(c)} | {c['suite']} | `{c['name']}` | {c['seconds']:.2f}s |" for c in cases]
+    md += ["", "</details>", ""]
+    text = "\n".join(md)
 
     write_junit(cases, job_name)
 
