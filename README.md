@@ -14,9 +14,10 @@
 </p>
 
 <p align="center">
-  <img src="Screenshots/iphone-mycard.png" width="220">
-  <img src="Screenshots/iphone-event.png" width="220">
-  <img src="Screenshots/iphone-watchlist.png" width="220">
+  <img src="Screenshots/iphone-mycard.png" width="200">
+  <img src="Screenshots/iphone-history.png" width="200">
+  <img src="Screenshots/iphone-event.png" width="200">
+  <img src="Screenshots/iphone-upcoming.png" width="200">
 </p>
 
 ---
@@ -25,24 +26,43 @@
 
 The official US Chess app is an event check-in tool, and the ratings website
 (ratings.uschess.org — **MUIR**) is slow on mobile. OpenBoard is a native client
-that makes tracking [**US Chess (USCF)**](https://new.uschess.org) ratings fast and
-delightful:
+that makes following [**US Chess (USCF)**](https://new.uschess.org) ratings — and
+finding the next tournament to play — fast and delightful:
 
 - **♛ My Card** — your player's ratings as glowing chess-clock digits, with a rating
-  sparkline and recent events.
+  line, a "just rated" banner, national + state rank, and recent events.
+- **📈 Rating History** — tap any rating card to see every rated event as a chart:
+  each tournament is a dot, **green if the rating went up, red if it went down, gray
+  if unchanged**. Filter by Regular / Quick, number of events, time period, or result;
+  every event opens its crosstable. Loads a player's **entire** career, not just
+  recent events.
+- **🏆 Crosstables** — full event and section names, a section picker for big
+  events, and rating changes on every row. **Tap a player to see each round** — the
+  opponent, their rating, and an **estimated rating change for both players**
+  (US Chess only publishes the event total; estimates always add up to it).
+- **🗺️ Upcoming tournaments** — US Chess tournaments **near you** (25 / 50 / 100 /
+  200 mi, this weekend / 30 days / 3 months, scholastic / quads / Grand Prix) plus
+  nationwide **major events**. Each tournament shows the date and weekday, a venue
+  map with **directions**, a **Register** button, the full announcement, and
+  organizer contacts.
+- **🏅 Top 100 by age** — browse US Chess's monthly Top 100 lists (age 7 & under
+  through 18, girls, 50+, 65+; Regular / Quick / Blitz; your state only). Players on
+  a list get a badge like **#37 · Age 9** everywhere they appear — My Card,
+  profiles, Watching, search results, and tournament standings.
 - **🔍 Search** — one field for players (name or 8-digit member ID) and tournaments
-  (12-digit event ID).
-- **📈 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
-  by side, USCF class title, national + state ranking, and full event history.
-- **🏆 Crosstables** — standings with rating changes on every row; **tap a player to
-  see who they faced and each result**.
-- **❤️ Watchlist** — follow your kid, rivals, and teammates; get a local notification
+  (12-digit event ID), plus a shortcut to the Top 100 lists.
+- **👤 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
+  by side, USCF class title, rankings, full event history, and a tap-to-copy
+  member ID.
+- **❤️ Watching** — follow your kid, rivals, and teammates; get a local notification
   when a followed player's rating changes.
 
 Built with **SwiftUI**, **Swift 6**, **SwiftData**, and the iOS 26 **Liquid Glass**
 material language. Universal (iPhone + iPad), with **zero third-party dependencies**.
 
-> **Data source:** ratings come from US Chess's **MUIR** platform (built by Leago).
+> **Data sources:** ratings come from US Chess's **MUIR** platform (built by Leago);
+> upcoming tournaments come from US Chess's **Tournament Life Announcements** and
+> **Plan Ahead Calendar** on [new.uschess.org](https://new.uschess.org/upcoming-tournaments).
 > &nbsp;·&nbsp; [US Chess](https://new.uschess.org)
 > &nbsp;·&nbsp; [Ratings site](https://ratings.uschess.org)
 > &nbsp;·&nbsp; [What is MUIR?](https://new.uschess.org/news/introducing-muir-member-uploads-information-and-reporting)
@@ -96,11 +116,21 @@ modes — the UI only ever sees the domain models.
    becomes your **My Card** home screen.
 2. **Follow rivals & friends.** Watch more players — they appear under **Watching**.
    Long-press a row → *Make primary* to switch whose card is shown.
-3. **Open a tournament.** Go to **Events**, paste a 12-digit event ID, and open the
-   crosstable. **Tap any row** to expand a player's round-by-round games (opponents +
-   results). Followed players are outlined in gold and auto-scrolled to.
-4. **Track changes.** OpenBoard polls followed players in the background and fires a
-   local notification when a rating updates. Pull to refresh anytime.
+3. **See the whole journey.** Tap the rating card on My Card or any profile to open
+   **Rating History** — every event as a green/red/gray dot, with filters.
+4. **Open a tournament.** Tap any event (or go to **Events → Results** and paste a
+   12-digit event ID). Pick a section from the section picker, then **tap any row**
+   to see each round with estimated rating changes for both players. Followed
+   players are outlined in gold and auto-scrolled to.
+5. **Find the next tournament.** **Events → Upcoming → Near me** lists US Chess
+   tournaments around your current location (or a city/ZIP you type). Tap one for
+   the map, directions, and the **Register** link. **Major events** lists national
+   championships and big-prize events nationwide.
+6. **Browse the Top 100.** **Search → Top 100 lists** shows the best players by age,
+   girls, and seniors — or just your state. Badges like **#37 · Age 9** show up next
+   to ranked players everywhere in the app.
+7. **Track changes.** OpenBoard polls followed players in the background and fires a
+   local notification when a rating updates.
 
 No account or sign-in. Reads fully from cache when offline, and ships a **zero-network
 demo mode** (`-mock` launch argument) with synthetic sample data.
@@ -150,6 +180,25 @@ All of these returned **200 with real JSON**:
 | Tournament (with section list) | `GET /rated-events/{eventId}` |
 | Section metadata | `GET /rated-events/{eventId}/sections/{number}` |
 | **Crosstable standings** (with round-by-round) | `GET /rated-events/{eventId}/sections/{number}/standings` |
+| Top 100 list catalog (age / gender / rating type) | `GET /top-players` |
+| One Top 100 list (monthly) | `GET /top-players/{listId}` |
+
+### Upcoming tournaments (new.uschess.org)
+
+MUIR only knows about events **after** they're rated, so upcoming tournaments come
+from the US Chess website, which isn't an API either — `TournamentParser` reads:
+
+| Purpose | Source |
+|---|---|
+| Search with **distance from a city/ZIP** | `new.uschess.org/upcoming-tournaments?field_geofield_proximity[value]=50&…[origin_address]=Somerville, NJ` (HTML, 30 per page) |
+| One announcement (dates, venue, coordinates, organizer, full text) | `new.uschess.org/{announcement-path}?_format=json` |
+| Major events nationwide | `new.uschess.org/plan-ahead-calendar` (HTML) |
+
+The site's event-type filter returns nothing and it has no date filter, so the
+**When** and **Type** filters run on the device. The device's location is turned into
+a city name with `MKReverseGeocodingRequest` (the search accepts a city or ZIP, not
+coordinates). Registration links are picked out of the announcement text; when
+there isn't one, the organizer's website is used.
 
 ### Actual JSON shapes
 
@@ -203,6 +252,10 @@ the iPad's round-by-round pills.
   member-sections vs standings; the DTO exposes a unified `system` accessor.
 - **Percentiles aren't returned** — computed from `rank` + `/members/max-ranks`
   population totals (national = `76,379`; NJ = `2,711`).
+- **Pages are capped at 100.** A player's sections are fetched page by page until
+  `hasNextPage` is false — active juniors can have hundreds of rated sections.
+- **No ages or birth dates.** Being on a Top 100 age list is the only age signal, so
+  badges come from indexing the lists (`TopListsIndex`, cached 12 h).
 - **Score is numeric** (`4.0`, `2.5`); formatted to `"3.0"` display strings.
 - No auth is required; the app sends `User-Agent: OpenBoard-iOS/1.0`.
 
@@ -230,13 +283,18 @@ Lightweight **MV** (Model–View) — no view-model ceremony.
 ```
 OpenBoard/
 ├── App/            OpenBoardApp, AppModel (@Observable), RootView (tab vs split routing)
-├── Models/         Domain contract: Player, Ratings, ChessEvent, Standing, ClassTitle …
+├── Models/         Domain contract: Player, Ratings, ChessEvent, Standing, ClassTitle,
+│                   RoundRatingEstimator, UpcomingTournaments, TopLists …
 ├── Services/       RatingsProviding protocol + Live / Mock / Cached decorator,
 │                   USCFAPITypes (wire DTOs + mapper), CacheStore (SwiftData),
+│                   TournamentsService (new.uschess.org + TournamentParser),
+│                   TopListsIndex (Top 100 badges), LocationProvider,
 │                   RefreshScheduler (BGAppRefreshTask + notifications)
-├── Components/     Theme, ClockDigits, Sparkline, RatingCards, Badges, ShareCard, States
-└── Views/          MyCardView, SearchView, PlayerProfileView, CrosstableView,
-                    WatchlistView, EventsView
+├── Components/     Theme, ClockDigits, Sparkline, RatingCards, Badges, FilterChip,
+│                   ShareCard, States
+└── Views/          MyCardView, SearchView, PlayerProfileView, RatingHistoryView,
+                    CrosstableView, EventsView, UpcomingTournamentsView,
+                    TournamentDetailView, TopListsView, WatchlistView
 ```
 
 - **`RatingsProviding`** is the seam. `LiveRatingsService` (an `actor`) talks HTTP;
@@ -297,14 +355,20 @@ screenshot below.
 
 ```bash
 xcodebuild test -project OpenBoard.xcodeproj -scheme OpenBoard \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.5'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+  GENERATE_INFOPLIST_FILE=YES   # the test targets don't set an Info.plist in project.yml
 ```
 
-- **Unit (Swift Testing, 15 tests / 4 suites):** decoding of **synthetic fixtures that
+- **Unit (Swift Testing, 31 tests / 7 suites):** decoding of **synthetic fixtures that
   mirror the real API shape** (member, sections, standings-with-rounds, search,
-  max-ranks), USCF class-title mapping (17 parameterized cases), delta math +
-  clock-digit formatting, and cache TTL logic (fresh/stale/miss + stale-served-on-failure).
-- **UI (XCTest):** search → player profile → crosstable happy path on the mock service.
+  max-ranks, Top 100 lists), USCF class-title mapping (17 parameterized cases), delta
+  math + clock-digit formatting, cache TTL logic, **per-round rating estimates**
+  (rounds add up to the official change; byes/new players skipped), **upcoming
+  tournament parsing** against saved US Chess pages, the **Top 100 badge index**, and
+  multi-page loading.
+- **UI (XCTest, 6 tests, mock service):** search → profile → crosstable; My Card →
+  Rating History → crosstable; another player's profile → Rating History; section
+  picker; Upcoming → tournament detail; Search → Top 100 → profile badge.
 
 All green on the iOS 26.5 simulator.
 
@@ -315,17 +379,21 @@ All green on the iOS 26.5 simulator.
 - ✅ Flips to live data by changing one `AppEnvironment` flag — **and the probe
   succeeded, so live is already the default.**
 - ✅ Unit + UI tests pass.
-- ✅ Dark-mode screenshots of every screen on iPhone 16 Pro and iPad Pro 13".
+- ✅ Dark-mode screenshots of every screen on iPhone 17 Pro and iPad Pro 13".
 
 ## 📱 Screenshots
 
 > Shown with synthetic sample data — no real member's information is used.
 
-### iPhone 16 Pro
+### iPhone 17 Pro
 
-| My Card | Player profile | Crosstable (tap to expand) | Watchlist | Search |
+| My Card | Rating History | Player profile | Crosstable (tap to expand) |
+|:---:|:---:|:---:|:---:|
+| ![My Card](Screenshots/iphone-mycard.png) | ![Rating History](Screenshots/iphone-history.png) | ![Profile](Screenshots/iphone-profile.png) | ![Crosstable](Screenshots/iphone-event.png) |
+
+| Upcoming near me | Tournament detail | Top 100 by age | Watching | Search |
 |:---:|:---:|:---:|:---:|:---:|
-| ![My Card](Screenshots/iphone-mycard.png) | ![Profile](Screenshots/iphone-profile.png) | ![Crosstable](Screenshots/iphone-event.png) | ![Watchlist](Screenshots/iphone-watchlist.png) | ![Search](Screenshots/iphone-search.png) |
+| ![Upcoming](Screenshots/iphone-upcoming.png) | ![Tournament](Screenshots/iphone-tournament.png) | ![Top 100](Screenshots/iphone-top100.png) | ![Watching](Screenshots/iphone-watchlist.png) | ![Search](Screenshots/iphone-search.png) |
 
 ### iPad Pro 13"  ·  `NavigationSplitView`
 
@@ -337,8 +405,15 @@ supports Slide Over, Split View, and Stage Manager.
   <img alt="iPad Player profile" src="Screenshots/ipad-profile.png" width="49%">
 </p>
 <p align="center">
+  <img alt="iPad Rating History" src="Screenshots/ipad-history.png" width="49%">
   <img alt="iPad Crosstable" src="Screenshots/ipad-event.png" width="49%">
-  <img alt="iPad Watchlist" src="Screenshots/ipad-watchlist.png" width="49%">
+</p>
+<p align="center">
+  <img alt="iPad Upcoming tournaments" src="Screenshots/ipad-upcoming.png" width="49%">
+  <img alt="iPad Tournament detail" src="Screenshots/ipad-tournament.png" width="49%">
+</p>
+<p align="center">
+  <img alt="iPad Watching" src="Screenshots/ipad-watchlist.png" width="49%">
 </p>
 
 ---
@@ -354,9 +429,8 @@ supports Slide Over, Split View, and Stage Manager.
 Not built yet — candidates inspired by similar trackers:
 - Head-to-head compare between two watched players.
 - Rating projection / "what a result would do to your rating" estimator.
-- Per-variant history charts (Quick/Blitz), not just Regular.
-- Affiliate/club pages and event discovery (the MUIR API exposes `/affiliates` and
-  `/rated-events`), replacing the placeholder that used to live on the Watchlist.
+- Affiliate/club pages (the MUIR API exposes `/affiliates`).
+- Add a tournament to Calendar; save favorite tournaments.
 
 ---
 
