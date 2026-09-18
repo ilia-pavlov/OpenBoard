@@ -54,11 +54,12 @@ struct PlayerTopBadges: View {
                             TopRankBadge(rank: rank)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier(AccessibilityID.topBadge(rank.definition.id))
                     }
                 }
             }
             .scrollClipDisabled()
-            .accessibilityIdentifier("top-badges")
+            .accessibilityIdentifier(AccessibilityID.topBadges)
         }
     }
 }
@@ -103,6 +104,7 @@ struct TopListsBrowseView: View {
             }
             .padding(16)
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.topLists)
         .background(Color.obBackground)
         .navigationTitle("Top 100")
         .navigationBarTitleDisplayMode(.inline)
@@ -122,30 +124,30 @@ struct TopListsBrowseView: View {
     @ViewBuilder
     private func filters(_ all: [TopListDefinition]) -> some View {
         Picker("Rating", selection: $rating) {
-            ForEach(TopListRating.allCases) { Text($0.title).tag($0) }
+            ForEach(TopListRating.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.segment("toplist-rating", "\($0)")) }
         }
         .pickerStyle(.segmented)
 
         let current = selected(all)
         HStack(spacing: 8) {
             FilterChip(title: current?.ageGroup ?? "Age", systemImage: "person.crop.circle",
-                       active: current?.ageGroup != "Overall") {
+                       active: current?.ageGroup != "Overall", id: AccessibilityID.filter("age")) {
                 Picker("Age", selection: Binding(get: { current?.id ?? "" }, set: { listID = $0 })) {
-                    ForEach(options(all)) { Text($0.ageGroup).tag($0.id) }
+                    ForEach(options(all)) { Text($0.ageGroup).tag($0.id).accessibilityIdentifier(AccessibilityID.filterOption("age", $0.id)) }
                 }
             }
             FilterChip(title: group == .open ? "Open" : "Girls", systemImage: "figure.stand",
-                       active: group == .women) {
+                       active: group == .women, id: AccessibilityID.filter("list")) {
                 Picker("List", selection: $group) {
-                    ForEach(Group.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(Group.allCases) { Text($0.rawValue).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("list", "\($0)")) }
                 }
             }
             if let homeState {
                 FilterChip(title: stateOnly ? homeState : "All states", systemImage: "mappin.and.ellipse",
-                           active: stateOnly) {
+                           active: stateOnly, id: AccessibilityID.filter("state")) {
                     Picker("State", selection: $stateOnly) {
-                        Text("All states").tag(false)
-                        Text("\(homeState) only").tag(true)
+                        Text("All states").tag(false).accessibilityIdentifier(AccessibilityID.filterOption("state", "all"))
+                        Text("\(homeState) only").tag(true).accessibilityIdentifier(AccessibilityID.filterOption("state", "home"))
                     }
                 }
             }
@@ -200,6 +202,7 @@ struct TopListView: View {
                 .padding(16)
             }
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.topLists)
         .background(Color.obBackground)
         .navigationTitle("Top 100")
         .navigationBarTitleDisplayMode(.inline)
@@ -253,7 +256,7 @@ struct TopListContent: View {
                     }
                     .buttonStyle(.plain)
                     .id(entry.id)
-                    .accessibilityIdentifier("toplist-\(entry.id)")
+                    .accessibilityIdentifier(AccessibilityID.topListEntry(entry.id))
                 }
             }
         }

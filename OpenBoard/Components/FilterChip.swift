@@ -7,6 +7,7 @@ struct FilterChip<Content: View>: View {
     var title: String
     var systemImage: String
     var active: Bool
+    var id: String?
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -28,5 +29,6 @@ struct FilterChip<Content: View>: View {
             .background(active ? Color.obGold.opacity(0.14) : Color.obCard, in: Capsule())
             .overlay(Capsule().strokeBorder(active ? Color.obGold.opacity(0.5) : Color.obHairline))
         }
+        .accessibilityIdentifier(id ?? "")
     }
 }

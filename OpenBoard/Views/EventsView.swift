@@ -23,10 +23,9 @@ struct EventsView: View {
         ScrollView {
             VStack(spacing: 16) {
                 Picker("Events", selection: $mode) {
-                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0).accessibilityIdentifier(AccessibilityID.segment("events", "\($0)")) }
                 }
                 .pickerStyle(.segmented)
-                .accessibilityIdentifier("events-mode")
 
                 if mode == .upcoming {
                     UpcomingTournamentsSection()
@@ -36,6 +35,7 @@ struct EventsView: View {
             }
             .padding(16)
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.events)
         .background(Color.obBackground)
         .navigationTitle("Events")
         .task(id: primaryMemberID) { await load(force: false) }

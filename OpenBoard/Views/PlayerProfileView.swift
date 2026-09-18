@@ -33,6 +33,7 @@ struct PlayerProfileView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 32)
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.profile)
         .background(Color.obBackground)
         .navigationTitle(state.value?.name ?? "Player")
         .navigationBarTitleDisplayMode(.inline)
@@ -60,7 +61,7 @@ struct PlayerProfileView: View {
         header(player)
 
         Picker("Section", selection: $segment) {
-            ForEach(Segment.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            ForEach(Segment.allCases, id: \.self) { Text($0.rawValue).tag($0).accessibilityIdentifier(AccessibilityID.segment("profile", "\($0)")) }
         }
         .pickerStyle(.segmented)
         .padding(.vertical, 4)
@@ -108,7 +109,7 @@ struct PlayerProfileView: View {
             }
             .buttonStyle(.glass)
             .sensoryFeedback(isWatching ? .success : .impact, trigger: isWatching)
-            .accessibilityIdentifier("watch-toggle")
+            .accessibilityIdentifier(AccessibilityID.watchToggle)
         }
         .padding(.top, 8)
     }
@@ -135,7 +136,7 @@ struct PlayerProfileView: View {
                                    sparkline: player.ratingHistory,
                                    showsDisclosure: player.hasHistory(.regular))
                 }
-                .accessibilityIdentifier("profile-rating-card")
+                .accessibilityIdentifier(AccessibilityID.profileRatingCard)
                 HStack(spacing: 16) {
                     RatingHistoryLink(player: player, system: .quick) {
                         MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal,
@@ -195,7 +196,7 @@ struct PlayerProfileView: View {
                     EventResultRow(event: event)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("history-event-\(event.id)")
+                .accessibilityIdentifier(AccessibilityID.historyEvent(event.id))
             }
         }
     }

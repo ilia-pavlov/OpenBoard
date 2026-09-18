@@ -155,7 +155,7 @@ struct CrosstableView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Section \(sectionIndex + 1) of \(event.sections.count): \(current?.name ?? "")")
         .accessibilityHint("Choose a section")
-        .accessibilityIdentifier("section-menu")
+        .accessibilityIdentifier(AccessibilityID.sectionMenu)
         .sensoryFeedback(.selection, trigger: sectionIndex)
         .sheet(isPresented: $showingSections) {
             SectionPickerSheet(sections: event.sections,
@@ -181,7 +181,6 @@ struct CrosstableView: View {
                             onTap: { toggle(standing.id) }
                         )
                         .id(standing.id)
-                        .accessibilityIdentifier("standing-\(standing.id)")
                     }
                 }
                 .padding(16)
@@ -194,6 +193,7 @@ struct CrosstableView: View {
                     withAnimation(.easeInOut) { proxy.scrollTo(target, anchor: .center) }
                 }
             }
+            .accessibilityIdentifier(AccessibilityID.Screen.crosstable)
         }
     }
 
@@ -278,7 +278,7 @@ struct SectionPickerSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(index == selection ? .isSelected : [])
-                .accessibilityIdentifier("section-option-\(index)")
+                .accessibilityIdentifier(AccessibilityID.sectionOption(index))
             }
             .navigationTitle("Sections")
             .navigationBarTitleDisplayMode(.inline)
@@ -315,6 +315,9 @@ struct StandingRow: View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: onTap) { header }
                 .buttonStyle(.plain)
+                // On the header, not the whole row: a container's ID would also
+                // overwrite the IDs inside the expanded rounds ("View full profile").
+                .accessibilityIdentifier(AccessibilityID.standing(standing.id))
 
             if isExpanded {
                 gamesSection
@@ -426,6 +429,7 @@ struct StandingRow: View {
                 .padding(.top, 2)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.viewFullProfile(standing.id))
         }
     }
 

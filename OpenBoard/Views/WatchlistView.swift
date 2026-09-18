@@ -41,6 +41,7 @@ struct WatchlistView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .accessibilityIdentifier(AccessibilityID.Screen.watching)
         .background(Color.obBackground)
         .navigationTitle("Watching")
         .toolbar {
@@ -106,7 +107,7 @@ struct WatchlistView: View {
                 Label("Unfollow", systemImage: "heart.slash")
             }
         }
-        .accessibilityIdentifier("watch-row-\(row.memberID)")
+        .accessibilityIdentifier(AccessibilityID.watchRow(row.memberID))
     }
 
     private func unfollow(from rows: [WatchedPlayer], at offsets: IndexSet) {
