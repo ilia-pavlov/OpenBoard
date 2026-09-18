@@ -4,6 +4,9 @@ protocol RatingsProviding: Sendable {
     func player(id: String) async throws -> Player
     func search(_ query: String) async throws -> [PlayerSummary]
     func event(id: String) async throws -> ChessEvent
+    /// Every Top 100 list US Chess publishes (monthly).
+    func topListDefinitions() async throws -> [TopListDefinition]
+    func topList(_ definition: TopListDefinition) async throws -> TopList
 }
 
 enum RatingsError: LocalizedError {

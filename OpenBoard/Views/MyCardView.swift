@@ -76,6 +76,8 @@ struct MyCardView: View {
         }
         .padding(.top, 4)
 
+        PlayerTopBadges(memberID: player.id)
+
         GlassEffectContainer(spacing: 16) {
             VStack(spacing: 16) {
                 RatingHistoryLink(player: player, system: .regular) {

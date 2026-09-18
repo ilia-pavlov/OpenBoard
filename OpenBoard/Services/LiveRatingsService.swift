@@ -24,11 +24,34 @@ actor LiveRatingsService: RatingsProviding {
 
     func player(id: String) async throws -> Player {
         async let member: APIMember = get("members/\(id)")
-        async let sections: APIPage<APIMemberSection> = get("members/\(id)/sections", query: ["Size": "50"])
+        async let sections = allSections(memberID: id)
         async let ranks = maxRanks()
         return try await USCFMapper.player(member: member,
-                                           sections: sections.items,
+                                           sections: sections,
                                            maxRanks: ranks)
+    }
+
+    /// Every rated section the player has, newest first. The API caps pages at
+    /// 100, and active juniors can have hundreds, so keep paging until done —
+    /// otherwise Rating History starts partway through their career.
+    private func allSections(memberID id: String) async throws -> [APIMemberSection] {
+        try await Self.collectPages(pageSize: 100) { offset, size in
+            try await self.get("members/\(id)/sections", query: ["Size": String(size), "Offset": String(offset)])
+        }
+    }
+
+    /// Fetches pages until the API says there are no more (capped at `maxPages`).
+    static func collectPages<T: Decodable & Sendable>(
+        pageSize: Int, maxPages: Int = 20,
+        fetch: @Sendable (_ offset: Int, _ size: Int) async throws -> APIPage<T>
+    ) async throws -> [T] {
+        var all: [T] = []
+        for pageIndex in 0..<maxPages {
+            let page = try await fetch(pageIndex * pageSize, pageSize)
+            all += page.items
+            guard page.hasNextPage == true, !page.items.isEmpty else { break }
+        }
+        return all
     }
 
     func search(_ query: String) async throws -> [PlayerSummary] {
@@ -82,6 +105,16 @@ actor LiveRatingsService: RatingsProviding {
         }
         let roundCount = all.map { $0.roundOutcomes?.count ?? 0 }.max()
         return all.map { USCFMapper.standing($0, roundCount: roundCount) }
+    }
+
+    func topListDefinitions() async throws -> [TopListDefinition] {
+        let page: APIPage<APITopListDefinition> = try await get("top-players", query: ["Size": "200"])
+        return USCFMapper.topListDefinitions(page.items)
+    }
+
+    func topList(_ definition: TopListDefinition) async throws -> TopList {
+        let list: APITopList = try await get("top-players/\(definition.id)")
+        return USCFMapper.topList(list, definition: definition)
     }
 
     private func maxRanks() async throws -> [APIMaxRank] {

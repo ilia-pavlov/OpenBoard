@@ -91,6 +91,7 @@ struct PlayerProfileView: View {
                     .foregroundStyle(.secondary)
                     ClassChip(rating: player.ratings.regular?.value,
                               stateName: player.ranking?.stateName ?? player.state)
+                    PlayerTopBadges(memberID: player.id)
                 }
                 Spacer()
             }

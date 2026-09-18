@@ -371,7 +371,9 @@ struct StandingRow: View {
                         prePostText("Q", standing.quick)
                     }
                 }
+                PlayerTopBadge(memberID: standing.id)
             }
+            .layoutPriority(1) // name and ratings get the width before the spacer
 
             Spacer(minLength: 8)
 

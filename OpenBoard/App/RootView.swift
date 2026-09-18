@@ -2,12 +2,18 @@ import SwiftUI
 import SwiftData
 
 struct RootView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            SplitRootView()
-        } else {
-            TabRootView()
+        Group {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                SplitRootView()
+            } else {
+                TabRootView()
+            }
         }
+        // Top 100 badges everywhere: index the lists once, in the background.
+        .task { await model.topLists.load(from: model.service) }
     }
 }
 
@@ -27,6 +33,10 @@ extension View {
                 TournamentDetailView(id: id)
             case .majorEvent(let event):
                 MajorEventView(event: event)
+            case .topLists:
+                TopListsBrowseView()
+            case .topList(let id, let highlight):
+                TopListView(id: id, highlight: highlight)
             }
         }
     }

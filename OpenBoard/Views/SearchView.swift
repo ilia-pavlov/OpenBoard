@@ -20,6 +20,7 @@ struct SearchView: View {
     var body: some View {
         List {
             if query.isEmpty {
+                browseSection
                 recentsSection
             } else if scope == .tournaments {
                 tournamentSection
@@ -47,6 +48,28 @@ struct SearchView: View {
     }
 
     // MARK: - Sections
+
+    private var browseSection: some View {
+        Section {
+            NavigationLink(value: Destination.topLists) {
+                HStack(spacing: 14) {
+                    Image(systemName: "medal.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.obGold)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Top 100 lists")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Best US Chess players by age: 7 & under through 18, girls, seniors")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("browse-top-100")
+        }
+    }
 
     private var recentsSection: some View {
         Section {
@@ -183,10 +206,13 @@ struct PlayerSummaryRow: View {
                             .foregroundStyle(Color.obTeal)
                     }
                 }
-                Text("ID \(player.id)")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text("ID \(player.id)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    PlayerTopBadge(memberID: player.id)
+                }
             }
             Spacer()
             ClockDigits(value: player.regular, size: .body)

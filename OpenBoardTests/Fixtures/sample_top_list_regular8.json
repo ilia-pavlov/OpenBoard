@@ -1,0 +1,70 @@
+{
+ "topPlayerReportDefinitionId": "Regular8",
+ "reportDate": "2026-09-01",
+ "topPlayers": [
+  {
+   "ordinal": 1,
+   "tieIndex": 0,
+   "countryCode": "USA",
+   "rating": 2123,
+   "gender": "Male",
+   "id": "31502851",
+   "firstName": "Ruben Yanmi",
+   "lastName": "Quintans",
+   "stateRep": "GA",
+   "status": "Active"
+  },
+  {
+   "ordinal": 2,
+   "tieIndex": 0,
+   "countryCode": "USA",
+   "rating": 1869,
+   "gender": "Male",
+   "id": "30902582",
+   "firstName": "Matthew",
+   "lastName": "Wang",
+   "stateRep": "CA",
+   "status": "Active"
+  },
+  {
+   "ordinal": 3,
+   "tieIndex": 0,
+   "countryCode": "USA",
+   "rating": 1860,
+   "gender": "Male",
+   "id": "31968521",
+   "firstName": "Jayaditya",
+   "lastName": "Reddy Pittu",
+   "stateRep": "SC",
+   "status": "Active"
+  },
+  {
+   "ordinal": 4,
+   "tieIndex": 0,
+   "countryCode": "USA",
+   "rating": 1845,
+   "gender": "Male",
+   "id": "30799518",
+   "firstName": "Sebastian",
+   "lastName": "Goodrich",
+   "stateRep": "NY",
+   "status": "Active"
+  },
+  {
+   "ordinal": 5,
+   "tieIndex": 0,
+   "countryCode": "USA",
+   "rating": 1830,
+   "gender": "Male",
+   "id": "31603312",
+   "firstName": "Varun Karthik",
+   "lastName": "Turaga",
+   "stateRep": "CA",
+   "status": "Active"
+  }
+ ],
+ "name": "Age 8",
+ "ratingSource": "R",
+ "minAge": 8,
+ "maxAge": 8
+}
