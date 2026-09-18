@@ -1,0 +1,117 @@
+name: CI
+
+# Every push (so feature branches and PRs from this repo get a check) and a
+# manual "Run workflow" button. Tests are offline: unit tests use saved
+# fixtures and UI tests run the app with -mock.
+on:
+  push:
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# dorny/test-reporter publishes a check run per job (needs checks: write).
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+env:
+  XCODE_VERSION: "26.5"   # matches local development
+  DESTINATION: "platform=iOS Simulator,name=iPhone 17 Pro,OS=latest"
+  # A failed test is re-run (only that test) up to this many attempts in total.
+  # Tests that pass on a retry still pass the job but are reported as flaky.
+  TEST_ATTEMPTS: "3"
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Unit tests
+            target: OpenBoardTests
+          - name: UI tests
+            target: OpenBoardUITests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project OpenBoard.xcodeproj \
+            -scheme OpenBoard \
+            -destination "$DESTINATION" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee build.log | { grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true; }
+          # pipefail: the step fails with xcodebuild; the full output is in the build.log artifact.
+
+      - name: Run ${{ matrix.name }}
+        run: |
+          RESULT="TestResults-${{ matrix.target }}.xcresult"
+          rm -rf "$RESULT" # xcodebuild won't overwrite a bundle; never read a stale one
+          xcodebuild test-without-building \
+            -project OpenBoard.xcodeproj \
+            -scheme OpenBoard \
+            -destination "$DESTINATION" \
+            -derivedDataPath DerivedData \
+            -only-testing:${{ matrix.target }} \
+            -retry-tests-on-failure \
+            -test-iterations "$TEST_ATTEMPTS" \
+            -resultBundlePath "$RESULT" \
+            > test.log 2>&1 || true
+          # The result bundle decides pass/fail below; the full log is an artifact.
+          test -d "$RESULT" || { tail -50 test.log; echo "::error::No test results — see test.log"; exit 1; }
+          xcrun xcresulttool get test-results summary --path "$RESULT" > summary.json
+          xcrun xcresulttool get test-results tests --path "$RESULT" > tests.json
+          python3 .github/scripts/check_results.py summary.json tests.json "${{ matrix.name }}"
+
+      # A "<job> report" check with every test, and failure annotations on the
+      # test source lines. Our own step above already decides pass/fail.
+      - name: Publish test report
+        if: always() && hashFiles('junit.xml') != ''
+        uses: dorny/test-reporter@v3
+        with:
+          name: ${{ matrix.name }} report
+          path: junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          list-suites: all
+          list-tests: all
+          max-annotations: 50
+
+      # Always: the .xcresult (open in Xcode), full logs, JSON, results.md, junit.xml.
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-results
+          path: |
+            TestResults-${{ matrix.target }}.xcresult
+            build.log
+            test.log
+            summary.json
+            tests.json
+            results.md
+            junit.xml
+            flaky.txt
+          if-no-files-found: warn
+          retention-days: 14
