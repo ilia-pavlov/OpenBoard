@@ -380,6 +380,7 @@ struct StandingRow: View {
             Text(standing.points)
                 .font(.title3.weight(.bold))
                 .monospacedDigit()
+                .fixedSize() // never wrap "3.0" when the name column is wide
                 .foregroundStyle(.primary)
 
             if canExpand {
