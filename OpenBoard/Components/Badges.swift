@@ -153,6 +153,6 @@ struct CopyableID: View {
         .sensoryFeedback(.success, trigger: copied) { _, new in new }
         .accessibilityLabel("Member ID \(id)")
         .accessibilityHint(copied ? "Copied" : "Double-tap to copy")
-        .accessibilityIdentifier("copy-member-id")
+        .accessibilityIdentifier(AccessibilityID.copyMemberID)
     }
 }

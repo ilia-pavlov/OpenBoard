@@ -29,6 +29,7 @@ struct SearchView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .accessibilityIdentifier(AccessibilityID.Screen.search)
         .background(Color.obBackground)
         .navigationTitle("Search")
         .searchable(text: $query, prompt: "Name, member ID, or event ID")
@@ -67,7 +68,7 @@ struct SearchView: View {
                 }
                 .padding(.vertical, 4)
             }
-            .accessibilityIdentifier("browse-top-100")
+            .accessibilityIdentifier(AccessibilityID.browseTop100)
         }
     }
 
@@ -117,7 +118,7 @@ struct SearchView: View {
                     NavigationLink(value: Destination.player(id: player.id)) {
                         PlayerSummaryRow(player: player)
                     }
-                    .accessibilityIdentifier("search-result-\(player.id)")
+                    .accessibilityIdentifier(AccessibilityID.searchResult(player.id))
                 }
             }
         }

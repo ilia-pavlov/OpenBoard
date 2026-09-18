@@ -24,7 +24,7 @@ struct UpcomingTournamentsSection: View {
     var body: some View {
         VStack(spacing: 14) {
             Picker("Scope", selection: $scope) {
-                ForEach(Scope.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(Scope.allCases) { Text($0.rawValue).tag($0).accessibilityIdentifier(AccessibilityID.segment("upcoming", "\($0)")) }
             }
             .pickerStyle(.segmented)
 
@@ -58,19 +58,22 @@ struct UpcomingTournamentsSection: View {
         locationRow
 
         HStack(spacing: 8) {
-            FilterChip(title: radius.title, systemImage: "location.circle", active: true) {
+            FilterChip(title: radius.title, systemImage: "location.circle", active: true,
+                       id: AccessibilityID.filter("distance")) {
                 Picker("Distance", selection: $radius) {
-                    ForEach(SearchRadius.allCases) { Text("Within \($0.title)").tag($0) }
+                    ForEach(SearchRadius.allCases) { Text("Within \($0.title)").tag($0).accessibilityIdentifier(AccessibilityID.filterOption("distance", "\($0.rawValue)")) }
                 }
             }
-            FilterChip(title: window.chipTitle, systemImage: "calendar", active: window != .any) {
+            FilterChip(title: window.chipTitle, systemImage: "calendar", active: window != .any,
+                       id: AccessibilityID.filter("when")) {
                 Picker("When", selection: $window) {
-                    ForEach(UpcomingWindow.allCases) { Text($0.title).tag($0) }
+                    ForEach(UpcomingWindow.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("when", "\($0)")) }
                 }
             }
-            FilterChip(title: kind.chipTitle, systemImage: "checkerboard.rectangle", active: kind != .any) {
+            FilterChip(title: kind.chipTitle, systemImage: "checkerboard.rectangle", active: kind != .any,
+                       id: AccessibilityID.filter("type")) {
                 Picker("Type", selection: $kind) {
-                    ForEach(TournamentKind.allCases) { Text($0.title).tag($0) }
+                    ForEach(TournamentKind.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("type", "\($0)")) }
                 }
             }
         }
@@ -120,7 +123,7 @@ struct UpcomingTournamentsSection: View {
             .obCard(cornerRadius: 16)
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("upcoming-location")
+        .accessibilityIdentifier(AccessibilityID.upcomingLocation)
     }
 
     private var locationTitle: String {
@@ -158,7 +161,7 @@ struct UpcomingTournamentsSection: View {
                     TournamentListingRow(listing: listing)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("upcoming-\(listing.id)")
+                .accessibilityIdentifier(AccessibilityID.upcoming(listing.id))
             }
             if !recurring.isEmpty {
                 SectionLabel(text: "Weekly & recurring")

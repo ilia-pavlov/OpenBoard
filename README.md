@@ -355,20 +355,68 @@ screenshot below.
 
 ```bash
 xcodebuild test -project OpenBoard.xcodeproj -scheme OpenBoard \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
-  GENERATE_INFOPLIST_FILE=YES   # the test targets don't set an Info.plist in project.yml
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 
-- **Unit (Swift Testing, 31 tests / 7 suites):** decoding of **synthetic fixtures that
-  mirror the real API shape** (member, sections, standings-with-rounds, search,
-  max-ranks, Top 100 lists), USCF class-title mapping (17 parameterized cases), delta
-  math + clock-digit formatting, cache TTL logic, **per-round rating estimates**
-  (rounds add up to the official change; byes/new players skipped), **upcoming
-  tournament parsing** against saved US Chess pages, the **Top 100 badge index**, and
-  multi-page loading.
-- **UI (XCTest, 6 tests, mock service):** search → profile → crosstable; My Card →
-  Rating History → crosstable; another player's profile → Rating History; section
-  picker; Upcoming → tournament detail; Search → Top 100 → profile badge.
+### Unit tests — Swift Testing, 31 tests, one suite per area
+
+```
+OpenBoardTests/
+├── DecodingTests            member, sections, standings-with-rounds, search, max-ranks
+├── ClassTitleTests          USCF class titles (17 parameterized cases)
+├── DeltaTests               rating deltas + clock-digit formatting
+├── CacheTests               cache TTL (fresh / stale / miss / stale served on failure)
+├── RoundEstimateTests       per-round estimates add up to the official change
+├── UpcomingTournamentTests  parsing saved US Chess pages (search, announcement, Plan Ahead)
+├── TopListTests             Top 100 lists, labels, badge index, multi-page loading
+└── Support/                 FixtureLoader, TestContainer (in-memory SwiftData)
+```
+
+Fixtures use **synthetic data that mirrors the real API shape**, plus saved copies of
+the US Chess tournament pages.
+
+### UI tests — XCTest, 11 tests, page objects
+
+```
+OpenBoardUITests/
+├── Support/
+│   ├── Runner                     base XCTestCase: launches offline (-mock) + screen objects
+│   └── XCUIElement+Assertions     assertExistence / assertExistenceAndTap / assertLabel …
+├── Views/                         one BaseView subclass per screen
+│   └── BaseView, MyCardView, ProfileView, RatingHistoryView, CrosstableView,
+│       SearchView, TopListsView, EventsView, TournamentDetailView, WatchingView
+└── Tests/                         SearchTests, RatingHistoryTests, CrosstableTests,
+                                   UpcomingTournamentTests, TopListsTests
+```
+
+- **Elements are found by accessibility ID only.** IDs live in `Shared/AccessibilityID.swift`,
+  compiled into both the app and the UI tests, so they can't drift. (The one exception is
+  the search bar: SwiftUI's `.searchable` can't take an ID.)
+- **Every screen method returns `Self`** (`@discardableResult`), so a test reads as a chain:
+
+```swift
+final class RatingHistoryTests: Runner {
+    @MainActor
+    func testMyCardToRatingHistoryToCrosstable() {
+        launch(.demoSeed)
+        myCard.assertOnScreen()
+            .tapHeroCard()
+        ratingHistory.assertOnScreen()
+            .filterResult(.down)
+            .assertEvent(Sample.lossEventID)
+            .assertNoEvent(Sample.eventID)
+            .filterResult(.up)
+            .tapEvent(Sample.eventID)
+        crosstable.assertOnScreen()
+            .assertStanding(Sample.playerID)
+    }
+}
+```
+
+- Tests start on the screen they need through launch routes (`-screen search`, `events`,
+  `history` …), since SwiftUI tab bar buttons can't carry IDs.
+- Failures point at the line in the test, not inside the helpers (`file:` / `line:` are
+  passed through).
 
 All green on the iOS 26.5 simulator.
 
@@ -378,7 +426,7 @@ All green on the iOS 26.5 simulator.
 - ✅ Runs fully on mock data with **zero network** (`-mock`).
 - ✅ Flips to live data by changing one `AppEnvironment` flag — **and the probe
   succeeded, so live is already the default.**
-- ✅ Unit + UI tests pass.
+- ✅ Unit + UI tests pass (31 unit, 11 UI).
 - ✅ Dark-mode screenshots of every screen on iPhone 17 Pro and iPad Pro 13".
 
 ## 📱 Screenshots

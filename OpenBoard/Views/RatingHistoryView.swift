@@ -116,7 +116,7 @@ struct RatingHistoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Picker("Rating", selection: $system) {
-                    ForEach(RatingSystem.allCases) { Text($0.title).tag($0) }
+                    ForEach(RatingSystem.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.segment("rating", "\($0)")) }
                 }
                 .pickerStyle(.segmented)
 
@@ -142,12 +142,13 @@ struct RatingHistoryView: View {
                     }
                     ForEach(visible.reversed()) { entry in
                         eventLink(entry.event)
-                            .accessibilityIdentifier("rating-history-event-\(entry.id)")
+                            .accessibilityIdentifier(AccessibilityID.ratingHistoryEvent(entry.id))
                     }
                 }
             }
             .padding()
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.ratingHistory)
         .background(Color.obBackground)
         .navigationTitle("Rating History")
         .navigationSubtitle(player.name)
@@ -161,19 +162,24 @@ struct RatingHistoryView: View {
     /// Three equal-width chips that always fit one row; pick the "all" option to clear one.
     private var filterChips: some View {
         HStack(spacing: 8) {
-            FilterChip(title: count.chipTitle, systemImage: "number", active: count != .all) {
+            FilterChip(title: count.chipTitle, systemImage: "number", active: count != .all,
+                       id: AccessibilityID.filter("events")) {
                 Picker("Events", selection: $count) {
-                    ForEach(EventCount.allCases) { Text($0.title).tag($0) }
+                    ForEach(EventCount.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("events", "\($0)")) }
                 }
             }
-            FilterChip(title: period.chipTitle, systemImage: "calendar", active: period != .all) {
+            FilterChip(title: period.chipTitle, systemImage: "calendar", active: period != .all,
+                       id: AccessibilityID.filter("time")) {
                 Picker("Time", selection: $period) {
-                    ForEach(Period.allCases) { Text($0.title).tag($0) }
+                    ForEach(Period.allCases) { Text($0.title).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("time", "\($0)")) }
                 }
             }
-            FilterChip(title: direction.chipTitle, systemImage: direction.systemImage, active: direction != .all) {
+            FilterChip(title: direction.chipTitle, systemImage: direction.systemImage, active: direction != .all,
+                       id: AccessibilityID.filter("result")) {
                 Picker("Result", selection: $direction) {
-                    ForEach(Direction.allCases) { Label($0.title, systemImage: $0.systemImage).tag($0) }
+                    ForEach(Direction.allCases) {
+                        Label($0.title, systemImage: $0.systemImage).tag($0).accessibilityIdentifier(AccessibilityID.filterOption("result", "\($0)"))
+                    }
                 }
             }
         }

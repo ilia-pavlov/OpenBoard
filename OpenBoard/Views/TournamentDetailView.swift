@@ -77,6 +77,7 @@ struct TournamentDetailContent: View {
             }
             .padding(16)
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.tournament)
     }
 
     // MARK: - Header
@@ -130,7 +131,7 @@ struct TournamentDetailContent: View {
                     .padding(.vertical, 4)
             }
             .buttonStyle(.glassProminent)
-            .accessibilityIdentifier("tournament-register")
+            .accessibilityIdentifier(AccessibilityID.tournamentRegister)
         }
     }
 
@@ -164,6 +165,7 @@ struct TournamentDetailContent: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
+                        .accessibilityIdentifier(AccessibilityID.tournamentAddress)
                 }
                 if let miles = distanceMiles {
                     Text("About \(miles) mi from you")
@@ -178,6 +180,7 @@ struct TournamentDetailContent: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.glass)
+                .accessibilityIdentifier(AccessibilityID.tournamentDirections)
             }
         }
         .padding(16)

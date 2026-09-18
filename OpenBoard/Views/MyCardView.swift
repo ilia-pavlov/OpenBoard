@@ -49,6 +49,7 @@ struct MyCardView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 32)
         }
+        .accessibilityIdentifier(AccessibilityID.Screen.myCard)
         .navigationTitle(state.value?.firstName ?? "My Card")
         .navigationBarTitleDisplayMode(.large)
         .refreshable {
@@ -87,7 +88,7 @@ struct MyCardView: View {
                                    peak: player.peakRegular,
                                    showsDisclosure: player.hasHistory(.regular))
                 }
-                .accessibilityIdentifier("hero-rating-card")
+                .accessibilityIdentifier(AccessibilityID.heroRatingCard)
                 HStack(spacing: 16) {
                     RatingHistoryLink(player: player, system: .quick) {
                         MiniRatingCard(label: "Quick", rating: player.ratings.quick, tint: .obTeal,
