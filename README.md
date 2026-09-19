@@ -88,6 +88,25 @@ open OpenBoard.xcodeproj         # then ⌘R on an iOS 26 simulator
 - **Zero third-party dependencies.** No SPM packages, no CocoaPods.
 - Universal: iPhone (`TabView`, 4 tabs) and iPad (`NavigationSplitView`, sidebar + detail).
 
+### Version & build numbers
+
+Both live in `project.yml` as build settings, and `Info.plist` just references them:
+
+| Setting | Info.plist key | Meaning |
+|---|---|---|
+| `MARKETING_VERSION` | `CFBundleShortVersionString` | the version testers see (`1.0`) |
+| `CURRENT_PROJECT_VERSION` | `CFBundleVersion` | the build, unique per upload |
+
+App Store Connect rejects an upload whose build number it has already seen, so
+the build has to change every time. Override it without touching the file:
+
+```bash
+xcodebuild ... CURRENT_PROJECT_VERSION=$(git rev-list --count HEAD)
+```
+
+Commit count is monotonic and works the same locally and in CI. Bump
+`MARKETING_VERSION` by hand when the release itself changes.
+
 ### Live vs mock — one flag
 
 The whole app runs on either live network data or bundled seed data, switched in

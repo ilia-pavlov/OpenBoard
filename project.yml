@@ -13,6 +13,12 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
+    # Version ("1.0", what testers see) and build ("7", must be unique for every
+    # upload — App Store Connect rejects a repeat). Override the build without
+    # editing this file:
+    #   xcodebuild ... CURRENT_PROJECT_VERSION=$(git rev-list --count HEAD)
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
 targets:
   OpenBoard:
     type: application
@@ -32,6 +38,8 @@ targets:
       path: OpenBoard/Info.plist
       properties:
         CFBundleDisplayName: OpenBoard
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers:
