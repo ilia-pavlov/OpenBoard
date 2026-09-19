@@ -127,10 +127,17 @@ modes — the UI only ever sees the domain models.
    tournaments around your current location (or a city/ZIP you type). Tap one for
    the map, directions, and the **Register** link. **Major events** lists national
    championships and big-prize events nationwide.
-6. **Browse the Top 100.** **Search → Top 100 lists** shows the best players by age,
+6. **Save a tournament for later.** On any tournament, tap **🔖 Save**. Saved
+   tournaments collect at the top of **Watching**, soonest first — swipe to remove.
+   Details are kept locally, so a saved event stays readable after the US Chess
+   announcement feed drops it.
+7. **Pick your look.** OpenBoard is dark by default. Tap the sun/moon on **My Card**
+   for **Light / Dark / System**, or long-press the app icon on the Home Screen and
+   pick one from there.
+8. **Browse the Top 100.** **Search → Top 100 lists** shows the best players by age,
    girls, and seniors — or just your state. Badges like **#37 · Age 9** show up next
    to ranked players everywhere in the app.
-7. **Track changes.** OpenBoard polls followed players in the background and fires a
+9. **Track changes.** OpenBoard polls followed players in the background and fires a
    local notification when a rating updates.
 
 No account or sign-in. Reads fully from cache when offline, and ships a **zero-network
@@ -283,7 +290,8 @@ Lightweight **MV** (Model–View) — no view-model ceremony.
 
 ```
 OpenBoard/
-├── App/            OpenBoardApp, AppModel (@Observable), RootView (tab vs split routing)
+├── App/            OpenBoardApp, AppModel (@Observable), RootView (tab vs split routing),
+│                   QuickActions (Home Screen appearance shortcuts + scene delegate)
 ├── Models/         Domain contract: Player, Ratings, ChessEvent, Standing, ClassTitle,
 │                   RoundRatingEstimator, UpcomingTournaments, TopLists …
 ├── Services/       RatingsProviding protocol + Live / Mock / Cached decorator,
@@ -292,10 +300,13 @@ OpenBoard/
 │                   TopListsIndex (Top 100 badges), LocationProvider,
 │                   RefreshScheduler (BGAppRefreshTask + notifications)
 ├── Components/     Theme, ClockDigits, Sparkline, RatingCards, Badges, FilterChip,
-│                   ShareCard, States
+│                   ShareCard, States, ScreenTitle, AppearanceMenu
 └── Views/          MyCardView, SearchView, PlayerProfileView, RatingHistoryView,
                     CrosstableView, EventsView, UpcomingTournamentsView,
                     TournamentDetailView, TopListsView, WatchlistView
+
+Shared/             AccessibilityID, Appearance — compiled into the app and the
+                    UI test target, so IDs and preference keys can't drift
 ```
 
 - **`RatingsProviding`** is the seam. `LiveRatingsService` (an `actor`) talks HTTP;
@@ -308,7 +319,9 @@ OpenBoard/
   **5-minute TTL**. Fresh entries serve instantly with no network; stale entries paint
   immediately, then refresh in the background. On failure the last cached copy is
   served, and the UI shows *"showing cached from 3:12 PM"* with Retry.
-- **Persistence:** SwiftData models `WatchedPlayer`, `CachedPayload`, `RecentSearch`.
+- **Persistence:** SwiftData models `WatchedPlayer`, `CachedPayload`, `RecentSearch`,
+  `SavedTournament`. A saved tournament copies its name, place and dates at save
+  time, so the row survives the announcement feed dropping the event once it passes.
   The app launches with an empty watchlist — the user searches for their own
   player (the first one watched becomes primary / "My Card") and looks up
   tournaments by event ID. Nothing is pre-seeded.
@@ -332,6 +345,12 @@ OpenBoard/
 - **Palette:** background `#0B0E13`, cards `#141922`, hairlines `#26303F`, gold
   `#E9B44C`, teal `#3DBCCB`, up-green `#41D18B`, down-red `#F0716E` — all adaptive
   for light mode via `Color(dynamicDark:light:)`.
+- **Appearance:** dark by default — the palette is dark-first and the light variants
+  are the fallback. The preference (`system` / `light` / `dark`) lives in `UserDefaults`
+  so a Home Screen quick action can write it from outside SwiftUI, and
+  `.preferredColorScheme` is applied at the `WindowGroup` root so sheets inherit it.
+  The rating glow is dropped in light mode: a glow needs a dark ground, and on the
+  light card the same shadow spreads into haze.
 - **Charts:** rating sparkline is Swift Charts `LineMark` + gradient `AreaMark` with a
   dotted last point.
 - **Haptics:** `.sensoryFeedback` on the watch toggle and pull-to-refresh completion.
@@ -376,7 +395,7 @@ OpenBoardTests/
 Fixtures use **synthetic data that mirrors the real API shape**, plus saved copies of
 the US Chess tournament pages.
 
-### UI tests — XCTest, 11 tests, page objects
+### UI tests — XCTest, 16 tests, page objects
 
 ```
 OpenBoardUITests/
@@ -387,12 +406,17 @@ OpenBoardUITests/
 │   └── BaseView, MyCardView, ProfileView, RatingHistoryView, CrosstableView,
 │       SearchView, TopListsView, EventsView, TournamentDetailView, WatchingView
 └── Tests/                         SearchTests, RatingHistoryTests, CrosstableTests,
-                                   UpcomingTournamentTests, TopListsTests
+                                   UpcomingTournamentTests, TopListsTests,
+                                   SavedTournamentTests
 ```
 
 - **Elements are found by accessibility ID only.** IDs live in `Shared/AccessibilityID.swift`,
-  compiled into both the app and the UI tests, so they can't drift. (The one exception is
-  the search bar: SwiftUI's `.searchable` can't take an ID.)
+  compiled into both the app and the UI tests, so they can't drift. Two exceptions,
+  both because SwiftUI won't take an ID there: the search bar (`.searchable`) and the
+  tab bar buttons. Tests normally start on the tab they need via `-screen`;
+  `BaseView.selectTab` matches a tab by label for the flows that must cross tabs in a
+  single launch, because the mock store is in-memory and a relaunch would wipe what
+  the test just created.
 - **Every screen method returns `Self`** (`@discardableResult`), so a test reads as a chain:
 
 ```swift
@@ -427,8 +451,8 @@ All green on the iOS 26.5 simulator.
 - ✅ Runs fully on mock data with **zero network** (`-mock`).
 - ✅ Flips to live data by changing one `AppEnvironment` flag — **and the probe
   succeeded, so live is already the default.**
-- ✅ Unit + UI tests pass (31 unit, 11 UI).
-- ✅ Dark-mode screenshots of every screen on iPhone 17 Pro and iPad Pro 13".
+- ✅ Unit + UI tests pass (31 unit, 16 UI).
+- ✅ Screenshots of every screen on iPhone 17 Pro and iPad Pro 13", dark and light.
 
 ## 📱 Screenshots
 
@@ -440,9 +464,17 @@ All green on the iOS 26.5 simulator.
 |:---:|:---:|:---:|:---:|
 | ![My Card](Screenshots/iphone-mycard.png) | ![Rating History](Screenshots/iphone-history.png) | ![Profile](Screenshots/iphone-profile.png) | ![Crosstable](Screenshots/iphone-event.png) |
 
-| Upcoming near me | Tournament detail | Top 100 by age | Watching | Search |
+| Upcoming near me | Tournament detail (saved) | Top 100 by age | Watching (saved + players) | Search |
 |:---:|:---:|:---:|:---:|:---:|
 | ![Upcoming](Screenshots/iphone-upcoming.png) | ![Tournament](Screenshots/iphone-tournament.png) | ![Top 100](Screenshots/iphone-top100.png) | ![Watching](Screenshots/iphone-watchlist.png) | ![Search](Screenshots/iphone-search.png) |
+
+### Light mode
+
+Dark by default; switch on My Card or by long-pressing the app icon.
+
+| My Card | Tournament detail |
+|:---:|:---:|
+| ![My Card in light mode](Screenshots/iphone-mycard-light.png) | ![Tournament detail in light mode](Screenshots/iphone-tournament-light.png) |
 
 ### iPad Pro 13"  ·  `NavigationSplitView`
 
@@ -479,7 +511,8 @@ Not built yet — candidates inspired by similar trackers:
 - Head-to-head compare between two watched players.
 - Rating projection / "what a result would do to your rating" estimator.
 - Affiliate/club pages (the MUIR API exposes `/affiliates`).
-- Add a tournament to Calendar; save favorite tournaments.
+- Add a saved tournament to Calendar, and a reminder before it starts.
+- Mark a saved tournament as *registered*, not just saved.
 
 ---
 

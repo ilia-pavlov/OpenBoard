@@ -15,6 +15,8 @@ class Runner: XCTestCase {
         case screen(Screen, arg: String? = nil)
         /// Pre-expand the followed player's crosstable row.
         case expandHighlight
+        /// Seed the appearance preference; "default" clears it (fresh install).
+        case appearance(String)
     }
 
     enum Screen: String {
@@ -53,6 +55,8 @@ class Runner: XCTestCase {
                 if let arg { arguments += ["-screenArg", arg] }
             case .expandHighlight:
                 arguments.append("-expandHighlight")
+            case .appearance(let value):
+                arguments += ["-appearance", value]
             }
         }
         app.launchArguments = arguments

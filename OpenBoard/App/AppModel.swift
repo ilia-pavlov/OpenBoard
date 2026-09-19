@@ -69,8 +69,10 @@ final class AppModel {
     }
 
     /// Screenshot/demo only (`-demoSeed`): populate the watchlist with synthetic
-    /// sample players so My Card and Watching render with content.
+    /// sample players, and save a couple of sample tournaments, so My Card and
+    /// Watching render with content.
     private func seedDemoWatchlist() {
+        seedDemoSavedTournaments()
         let ctx = container.mainContext
         guard ((try? ctx.fetchCount(FetchDescriptor<WatchedPlayer>())) ?? 0) == 0 else { return }
         let primary = MockRatingsService.samplePlayer
@@ -85,6 +87,21 @@ final class AppModel {
                                      lastKnownRegular: s.regular?.post, lastKnownQuick: s.quick?.post,
                                      lastRatedDate: MockRatingsService.sampleEvent.date,
                                      sortOrder: index + 1))
+        }
+        try? ctx.save()
+    }
+
+    /// Two of the mock listings, so Watching shows the saved section. One-day
+    /// and multi-day, which are formatted differently.
+    private func seedDemoSavedTournaments() {
+        let ctx = container.mainContext
+        guard ((try? ctx.fetchCount(FetchDescriptor<SavedTournament>())) ?? 0) == 0 else { return }
+        for listing in MockTournamentsService.listings.prefix(3).filter({ !$0.isRecurring }) {
+            ctx.insert(SavedTournament(id: listing.id,
+                                       name: listing.name,
+                                       location: listing.location,
+                                       startDate: listing.startDate,
+                                       endDate: listing.endDate))
         }
         try? ctx.save()
     }
