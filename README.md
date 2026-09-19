@@ -351,6 +351,11 @@ Shared/             AccessibilityID, Appearance — compiled into the app and th
   `.preferredColorScheme` is applied at the `WindowGroup` root so sheets inherit it.
   The rating glow is dropped in light mode: a glow needs a dark ground, and on the
   light card the same shadow spreads into haze.
+- **App icon:** three appearances, drawn per variant rather than converted — black
+  pawn on near-white for light, white pawn for dark and tinted. Dark and tinted ship
+  on transparency, because iOS composites them over a background it supplies; tinted
+  is greyscale, since the system maps luminance to the user's chosen tint. The icon
+  follows *iOS's* appearance, not the in-app preference — no API binds the two.
 - **Charts:** rating sparkline is Swift Charts `LineMark` + gradient `AreaMark` with a
   dotted last point.
 - **Haptics:** `.sensoryFeedback` on the watch toggle and pull-to-refresh completion.
@@ -453,6 +458,7 @@ All green on the iOS 26.5 simulator.
   succeeded, so live is already the default.**
 - ✅ Unit + UI tests pass (31 unit, 16 UI).
 - ✅ Screenshots of every screen on iPhone 17 Pro and iPad Pro 13", dark and light.
+- ✅ App icon ships light, dark and tinted appearances.
 
 ## 📱 Screenshots
 
