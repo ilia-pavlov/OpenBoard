@@ -30,6 +30,7 @@ struct MyCardView: View {
     private func content(memberID: String) -> some View {
         ScrollView {
             VStack(spacing: 16) {
+                titleRow(state.value?.firstName ?? "My Card")
                 switch state {
                 case .idle, .loading:
                     if let player = state.value {
@@ -50,8 +51,9 @@ struct MyCardView: View {
             .padding(.bottom, 32)
         }
         .accessibilityIdentifier(AccessibilityID.Screen.myCard)
-        .navigationTitle(state.value?.firstName ?? "My Card")
-        .navigationBarTitleDisplayMode(.large)
+        // The name is drawn in the content, not as a large navigation title,
+        // so the appearance control can sit on its line.
+        .toolbar(.hidden, for: .navigationBar)
         .refreshable {
             await load(memberID: memberID, force: true)
             refreshPulse += 1
@@ -170,6 +172,8 @@ struct MyCardView: View {
     private var onboarding: some View {
         ScrollView {
             VStack(spacing: 20) {
+                titleRow("My Card")
+                    .padding(.horizontal, 16)
                 Image(systemName: "crown.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(Color.obGold)
@@ -192,7 +196,20 @@ struct MyCardView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .navigationTitle("My Card")
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    /// Screen title with the appearance control on its trailing edge.
+    private func titleRow(_ title: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.largeTitle.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Spacer(minLength: 12)
+            AppearanceMenu()
+                .font(.title3)
+        }
     }
 
     // MARK: - Loading
