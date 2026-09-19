@@ -22,6 +22,7 @@ struct EventsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                ScreenTitle("Events")
                 Picker("Events", selection: $mode) {
                     ForEach(Mode.allCases) { Text($0.rawValue).tag($0).accessibilityIdentifier(AccessibilityID.segment("events", "\($0)")) }
                 }
@@ -37,7 +38,7 @@ struct EventsView: View {
         }
         .accessibilityIdentifier(AccessibilityID.Screen.events)
         .background(Color.obBackground)
-        .navigationTitle("Events")
+        .toolbar(.hidden, for: .navigationBar)
         .task(id: primaryMemberID) { await load(force: false) }
         .refreshable { await load(force: true) }
     }

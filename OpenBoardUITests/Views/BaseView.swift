@@ -106,6 +106,24 @@ class BaseView {
         return self
     }
 
+    // MARK: - Tabs
+
+    /// Switches tabs by visible label. Tab bar buttons are the one documented
+    /// exception to IDs-only lookup — SwiftUI won't set an identifier on them.
+    /// Tests normally start on the tab they need via `-screen`; this is for the
+    /// flows that have to cross tabs in a single launch, because the mock store
+    /// is in-memory and a relaunch would wipe what the test just created.
+    @discardableResult
+    func selectTab(
+        _ title: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        app.buttons[title].firstMatch
+            .assertExistenceAndTap(timeout: 10, "No tab button '\(title)'", file: file, line: line)
+        return self
+    }
+
     // MARK: - Shared controls
 
     /// Taps a segmented-control item, e.g. `selectSegment("profile", "history")`.

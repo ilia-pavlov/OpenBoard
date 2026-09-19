@@ -60,6 +60,9 @@ enum AccessibilityID {
     static let upcomingLocation = "upcoming-location"
     static func upcoming(_ listingID: String) -> String { "upcoming-\(listingID)" }
     static let tournamentRegister = "tournament-register"
+    static let tournamentSave = "tournament-save"
+    /// One saved tournament row in Watching, e.g. `savedTournament("/sample-saturday-quads")`.
+    static func savedTournament(_ id: String) -> String { "saved-tournament-\(id)" }
     static let tournamentAddress = "tournament-address"
     static let tournamentDirections = "tournament-directions"
 

@@ -43,6 +43,36 @@ final class WatchedPlayer {
     }
 }
 
+/// A tournament the user saved for later from its detail screen. The fields are
+/// the ones the Watching row needs, copied at save time: the announcement feed
+/// drops events once they pass, and a saved row should survive that.
+@Model
+final class SavedTournament {
+    /// Announcement site path, e.g. "/sample-saturday-quads" — the same id the
+    /// detail screen and `Destination.upcomingTournament` use.
+    @Attribute(.unique) var id: String
+    var name: String
+    var location: String?
+    var startDate: Date?
+    var endDate: Date?
+    var savedAt: Date
+
+    init(
+        id: String,
+        name: String,
+        location: String? = nil,
+        startDate: Date? = nil,
+        endDate: Date? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.location = location
+        self.startDate = startDate
+        self.endDate = endDate
+        self.savedAt = .now
+    }
+}
+
 @Model
 final class RecentSearch {
     @Attribute(.unique) var query: String

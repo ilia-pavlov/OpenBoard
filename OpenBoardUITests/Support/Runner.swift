@@ -29,6 +29,8 @@ class Runner: XCTestCase {
         static let rivalID = "90000011"       // Maya Brooks, rank 3 in the sample event
         static let girlsListID = "WomensRegular8"
         static let age9ListID = "Regular9"
+        static let upcomingID = "/sample-saturday-quads"   // Saturday Rated Quads
+        static let upcomingID2 = "/sample-garden-state-open" // Garden State Open (2 days)
     }
 
     @MainActor private(set) lazy var app = XCUIApplication()

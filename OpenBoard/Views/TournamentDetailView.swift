@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import MapKit
 
 /// One upcoming tournament: when, where (map + directions + distance),
@@ -52,13 +53,16 @@ struct TournamentDetailContent: View {
     let detail: TournamentDetail
 
     @Environment(AppModel.self) private var model
+    // Reactive: a computed fetch off AppModel is NOT observed, so the button
+    // kept its old title after a tap. @Query republishes on every change.
+    @Query private var saved: [SavedTournament]
     @State private var showFullAnnouncement = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                registerButton
+                actionButtons
                 if detail.latitude != nil || detail.addressLine != nil {
                     locationCard
                 }
@@ -118,7 +122,41 @@ struct TournamentDetailContent: View {
         return Format.dateRange(start, end)
     }
 
-    // MARK: - Register
+    // MARK: - Register & save
+
+    /// Register (when the announcement has a link) beside Save-for-later.
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            registerButton
+            saveButton
+        }
+    }
+
+    private var isSaved: Bool { saved.contains { $0.id == detail.id } }
+
+    private var saveButton: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.28)) { model.toggleSaved(detail) }
+        } label: {
+            Label {
+                Text(isSaved ? "Saved" : "Save")
+                    .contentTransition(.numericText())
+            } icon: {
+                Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                    // The outline fills in place, then the filled mark bounces.
+                    .contentTransition(.symbolEffect(.replace))
+                    .symbolEffect(.bounce, value: isSaved)
+            }
+            .font(.headline)
+            .foregroundStyle(isSaved ? Color.obGold : .primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.glass)
+        .sensoryFeedback(isSaved ? .success : .impact, trigger: isSaved)
+        .accessibilityIdentifier(AccessibilityID.tournamentSave)
+        .accessibilityLabel(isSaved ? "Saved for later" : "Save for later")
+    }
 
     @ViewBuilder
     private var registerButton: some View {

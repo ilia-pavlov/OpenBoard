@@ -52,7 +52,8 @@ final class AppModel {
     init(dataSource: AppEnvironment.DataSource = AppEnvironment.dataSource,
          demoSeed: Bool = AppEnvironment.demoSeed) {
         let mock = dataSource == .mock
-        let schema = Schema([WatchedPlayer.self, CachedPayload.self, RecentSearch.self])
+        let schema = Schema([WatchedPlayer.self, CachedPayload.self, RecentSearch.self,
+                             SavedTournament.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: mock)
         container = try! ModelContainer(for: schema, configurations: [config])
 
@@ -86,6 +87,42 @@ final class AppModel {
                                      sortOrder: index + 1))
         }
         try? ctx.save()
+    }
+
+    // MARK: - Saved tournaments
+
+    var savedTournamentIDs: Set<String> {
+        let rows = (try? container.mainContext.fetch(FetchDescriptor<SavedTournament>())) ?? []
+        return Set(rows.map(\.id))
+    }
+
+    func isSaved(tournament id: String) -> Bool {
+        savedTournamentIDs.contains(id)
+    }
+
+    /// Saves the tournament, or removes it when it is already saved.
+    func toggleSaved(_ detail: TournamentDetail) {
+        let context = container.mainContext
+        let id = detail.id
+        let existing = try? context.fetch(
+            FetchDescriptor<SavedTournament>(predicate: #Predicate { $0.id == id })).first
+        if let existing {
+            context.delete(existing)
+        } else {
+            let place = [detail.city, detail.state].compactMap { $0 }
+                .filter { !$0.isEmpty }.joined(separator: ", ")
+            context.insert(SavedTournament(id: id,
+                                           name: detail.name,
+                                           location: place.isEmpty ? nil : place,
+                                           startDate: detail.startDate,
+                                           endDate: detail.endDate))
+        }
+        try? context.save()
+    }
+
+    func removeSaved(_ row: SavedTournament) {
+        container.mainContext.delete(row)
+        try? container.mainContext.save()
     }
 
     // MARK: - Watchlist helpers
