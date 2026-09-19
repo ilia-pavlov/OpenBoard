@@ -295,6 +295,7 @@ struct SectionPickerSheet: View {
 // MARK: - Standing row
 
 struct StandingRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var standing: Standing
     var isWatched: Bool
     var isHighlight: Bool
@@ -339,63 +340,97 @@ struct StandingRow: View {
     // MARK: Header (tappable)
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Text("\(standing.rank)")
-                .font(.headline.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(placeColor)
-                .frame(width: 30, alignment: .center)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(standing.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if let state = standing.state {
-                        Text(state)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color.obTeal)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                // At accessibility sizes the name column's ideal width exceeds the
+                // card, and layoutPriority lets it claim that width anyway — the row
+                // then overflows and the rank and name are clipped off the leading
+                // edge. Stacking gives every part the full width instead.
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        rankText
+                        Spacer(minLength: 8)
+                        scoreText
+                        chevron
                     }
-                    if isWatched {
-                        Image(systemName: "heart.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.obGold)
-                    }
+                    nameColumn
                 }
-                // Side by side when they fit, otherwise stacked — never truncated.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        prePostText("R", standing.regular)
-                        prePostText("Q", standing.quick)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        prePostText("R", standing.regular)
-                        prePostText("Q", standing.quick)
-                    }
+            } else {
+                HStack(spacing: 12) {
+                    rankText
+                    nameColumn
+                        .layoutPriority(1) // name and ratings get the width before the spacer
+                    Spacer(minLength: 8)
+                    scoreText
+                    chevron
                 }
-                PlayerTopBadge(memberID: standing.id)
-            }
-            .layoutPriority(1) // name and ratings get the width before the spacer
-
-            Spacer(minLength: 8)
-
-            Text(standing.points)
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
-                .fixedSize() // never wrap "3.0" when the name column is wide
-                .foregroundStyle(.primary)
-
-            if canExpand {
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.tertiary)
-                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
             }
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityHint(canExpand ? (isExpanded ? "Collapse games" : "Show games") : "")
+    }
+
+    private var rankText: some View {
+        Text("\(standing.rank)")
+            .font(.headline.weight(.bold))
+            .monospacedDigit()
+            .foregroundStyle(placeColor)
+            // minWidth, not width: a scaled-up digit would otherwise be squeezed.
+            .frame(minWidth: 30, alignment: .center)
+            .fixedSize()
+    }
+
+    private var scoreText: some View {
+        Text(standing.points)
+            .font(.title3.weight(.bold))
+            .monospacedDigit()
+            .fixedSize() // never wrap "3.0" when the name column is wide
+            .foregroundStyle(.primary)
+    }
+
+    @ViewBuilder
+    private var chevron: some View {
+        if canExpand {
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.tertiary)
+                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+        }
+    }
+
+    private var nameColumn: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(standing.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                if let state = standing.state {
+                    Text(state)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.obTeal)
+                        .fixedSize()
+                }
+                if isWatched {
+                    Image(systemName: "heart.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Color.obGold)
+                }
+            }
+            // Side by side when they fit, otherwise stacked — never truncated.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    prePostText("R", standing.regular)
+                    prePostText("Q", standing.quick)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    prePostText("R", standing.regular)
+                    prePostText("Q", standing.quick)
+                }
+            }
+            PlayerTopBadge(memberID: standing.id)
+        }
     }
 
     // MARK: Expanded games
