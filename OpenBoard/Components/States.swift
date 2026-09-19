@@ -50,7 +50,9 @@ struct SkeletonCard: View {
 
     private var shimmer: some View {
         GeometryReader { geo in
-            LinearGradient(colors: [.clear, Color.white.opacity(0.06), .clear],
+            // Lightens the dark card, darkens the light one — a white sweep is
+            // invisible on the white card obCard becomes in light mode.
+            LinearGradient(colors: [.clear, Color.obShimmer.opacity(0.06), .clear],
                            startPoint: .leading, endPoint: .trailing)
                 .frame(width: geo.size.width * 0.7)
                 .offset(x: geo.size.width * phase)

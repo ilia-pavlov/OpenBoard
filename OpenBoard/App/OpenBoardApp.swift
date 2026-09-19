@@ -5,8 +5,11 @@ import UserNotifications
 @main
 struct OpenBoardApp: App {
     @State private var model: AppModel
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @AppStorage(Appearance.key) private var appearance: Appearance = .default
 
     init() {
+        Appearance.applyLaunchArgument()
         let model = AppModel()
         _model = State(initialValue: model)
         if AppEnvironment.dataSource == .live {
@@ -20,6 +23,9 @@ struct OpenBoardApp: App {
                 .environment(model)
                 .modelContainer(model.container)
                 .tint(.obGold)
+                // On the WindowGroup root so sheets inherit it too.
+                .preferredColorScheme(appearance.colorScheme)
+                .onChange(of: appearance) { _, new in QuickActions.refresh(current: new) }
                 .task {
                     // The app no longer badges its icon; clear any count left by older builds.
                     try? await UNUserNotificationCenter.current().setBadgeCount(0)

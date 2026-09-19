@@ -18,6 +18,8 @@ extension Color {
     static let obUp = Color(dynamicDark: 0x41D18B, light: 0x14834E)
     /// Rating went down.
     static let obDown = Color(dynamicDark: 0xF0716E, light: 0xC2413E)
+    /// Skeleton sweep — always the opposite of the card it runs across.
+    static let obShimmer = Color(dynamicDark: 0xFFFFFF, light: 0x0B0E13)
 
     init(dynamicDark dark: UInt32, light: UInt32) {
         self.init(uiColor: UIColor { traits in

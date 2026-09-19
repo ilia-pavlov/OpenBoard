@@ -7,14 +7,18 @@ struct ClockDigits: View {
     var size: Font.TextStyle = .largeTitle
 
     @ScaledMetric(relativeTo: .largeTitle) private var glowRadius = 10
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Group {
             if let value {
                 Text(value.clockDigits)
                     .foregroundStyle(tint)
-                    .shadow(color: tint.opacity(0.55), radius: glowRadius)
-                    .shadow(color: tint.opacity(0.25), radius: glowRadius * 2.4)
+                    // A glow needs a dark ground: on the light card the same
+                    // shadow spreads into haze, so light mode keeps the digits
+                    // crisp and drops it.
+                    .shadow(color: tint.opacity(colorScheme == .dark ? 0.55 : 0), radius: glowRadius)
+                    .shadow(color: tint.opacity(colorScheme == .dark ? 0.25 : 0), radius: glowRadius * 2.4)
             } else {
                 Text(verbatim: "– – – –")
                     .foregroundStyle(.tertiary)
@@ -34,14 +38,15 @@ struct HeroClockDigits: View {
     var tint: Color = .obGold
 
     @ScaledMetric(relativeTo: .largeTitle) private var fontSize = 64
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Group {
             if let value {
                 Text(value.clockDigits)
                     .foregroundStyle(tint)
-                    .shadow(color: tint.opacity(0.55), radius: 12)
-                    .shadow(color: tint.opacity(0.22), radius: 30)
+                    .shadow(color: tint.opacity(colorScheme == .dark ? 0.55 : 0), radius: 12)
+                    .shadow(color: tint.opacity(colorScheme == .dark ? 0.22 : 0), radius: 30)
             } else {
                 Text(verbatim: "– – – –")
                     .foregroundStyle(.tertiary)
