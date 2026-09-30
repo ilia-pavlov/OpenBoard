@@ -1,0 +1,135 @@
+name: API monitor
+
+# Contract monitoring for the public US Chess services the app reads
+# (ratings-api.uschess.org and new.uschess.org). Neither is a supported public
+# API, so they can change without notice. Twice a day this runs the live
+# contract tests (OpenBoardTests/LiveAPITests) through the app's own services
+# and parsers.
+#
+# A failure opens a GitHub issue labelled `api-monitor` (or comments on the open
+# one); the next passing run closes it. "Run workflow" runs it on demand.
+on:
+  schedule:
+    # Morning and evening, US Eastern: 07:00 and 19:00 EDT (06:00 / 18:00 EST).
+    # GitHub may start scheduled runs a few minutes late.
+    - cron: "0 11 * * *"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: api-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  XCODE_VERSION: "26.5"
+  DESTINATION: "platform=iOS Simulator,name=iPhone 17 Pro,OS=latest"
+  # The contract suite; every one of its tests must run (none skipped).
+  CONTRACT_TESTS: "OpenBoardTests/LiveAPITests"
+  EXPECTED_TESTS: "7"
+
+jobs:
+  contracts:
+    name: US Chess API contracts
+    runs-on: macos-26
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Run contract tests (live)
+        env:
+          # TEST_RUNNER_ variables reach the test process without the prefix:
+          # the suite sees LIVE_API=1 and runs instead of skipping.
+          TEST_RUNNER_LIVE_API: "1"
+        run: |
+          RESULT="TestResults-API.xcresult"
+          rm -rf "$RESULT"
+          # One retry: a live service can blip; a real contract break fails twice.
+          xcodebuild test \
+            -project OpenBoard.xcodeproj \
+            -scheme OpenBoard \
+            -destination "$DESTINATION" \
+            -derivedDataPath DerivedData \
+            -only-testing:"$CONTRACT_TESTS" \
+            -retry-tests-on-failure \
+            -test-iterations 2 \
+            -resultBundlePath "$RESULT" \
+            CODE_SIGNING_ALLOWED=NO \
+            > test.log 2>&1 || true
+          test -d "$RESULT" || { tail -80 test.log; echo "::error::No test results — see test.log"; exit 1; }
+          xcrun xcresulttool get test-results summary --path "$RESULT" > summary.json
+          xcrun xcresulttool get test-results tests --path "$RESULT" > tests.json
+          python3 .github/scripts/check_results.py summary.json tests.json "API contracts"
+          # Guard against a silent pass: every contract test must have run.
+          python3 - <<'EOF'
+          import json, os, sys
+          s = json.load(open("summary.json"))
+          passed, skipped = s.get("passedTests", 0), s.get("skippedTests", 0)
+          expected = int(os.environ["EXPECTED_TESTS"])
+          if skipped or passed < expected:
+              print(f"::error::Only {passed}/{expected} contract tests ran ({skipped} skipped) — is LIVE_API reaching the tests?")
+              sys.exit(1)
+          EOF
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-monitor-results
+          path: |
+            TestResults-API.xcresult
+            test.log
+            summary.json
+            tests.json
+            results.md
+          if-no-files-found: warn
+          retention-days: 14
+
+      # ---- Alerting: one open issue while contracts are broken ----
+
+      - name: Open or update the alert issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create api-monitor --color B60205 \
+            --description "US Chess API contract monitor" --force >/dev/null
+          {
+            echo "The US Chess API contract tests failed on $(date -u '+%Y-%m-%d %H:%M UTC')."
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            if [ -f results.md ]; then cat results.md; else echo "No test results; see the run log."; fi
+          } > body.md
+          open=$(gh issue list --label api-monitor --state open --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "API monitor: US Chess contract tests failing" \
+              --label api-monitor --body-file body.md
+          fi
+
+      - name: Close the alert issue once passing again
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for n in $(gh issue list --label api-monitor --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Contract tests pass again: $RUN_URL"
+          done

@@ -493,6 +493,25 @@ final class RatingHistoryTests: Runner {
 
 All green on the iOS 26.5 simulator.
 
+### API contract monitor — twice a day
+
+The US Chess services aren't a supported public API, so they can change without
+notice. `OpenBoardTests/LiveAPITests` holds **contract tests**: 7 live checks that
+call every endpoint the app uses, through the app's own services and parsers
+(player profile, search, crosstable, Top 100, Best wins games, upcoming
+tournaments + announcement, Plan Ahead Calendar). They're skipped in normal runs.
+
+The **API monitor** workflow (`.github/workflows/api-monitor.yml`) runs them at
+07:00 and 19:00 US Eastern (and on demand from the Actions tab). A failure opens a
+GitHub issue labelled `api-monitor`; the next passing run closes it. To run them
+locally:
+
+```bash
+TEST_RUNNER_LIVE_API=1 xcodebuild test -project OpenBoard.xcodeproj -scheme OpenBoard \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+  -only-testing:OpenBoardTests/LiveAPITests
+```
+
 ## Definition of done — status
 
 - ✅ Builds clean on iOS 26 simulator (Swift 6, no warnings-as-errors surprises).
