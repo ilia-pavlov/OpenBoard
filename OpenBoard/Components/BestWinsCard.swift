@@ -175,6 +175,8 @@ private struct BestWinsInfo: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(width: 300, alignment: .leading)
         .padding(18)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.bestWinsInfoPopover)
     }
 }
 

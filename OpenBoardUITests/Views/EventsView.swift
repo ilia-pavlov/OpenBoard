@@ -37,6 +37,33 @@ final class EventsView: BaseView {
         selectFilter("type", type.rawValue, file: file, line: line)
     }
 
+    /// Opens the distance picker and checks every option is offered, then picks one.
+    @discardableResult
+    func selectDistance(
+        _ miles: Int,
+        offering options: [Int],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        tap(AccessibilityID.filter("distance"), file: file, line: line)
+        for option in options {
+            assertExists(AccessibilityID.filterOption("distance", "\(option)"), file: file, line: line)
+        }
+        return tap(AccessibilityID.filterOption("distance", "\(miles)"), file: file, line: line)
+    }
+
+    @discardableResult
+    func assertDistance(
+        _ title: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        let chip = element(AccessibilityID.filter("distance")).assertExistence(file: file, line: line)
+        XCTAssertTrue(chip.label.contains(title), "Distance chip '\(chip.label)' lacks '\(title)'",
+                      file: file, line: line)
+        return self
+    }
+
     @discardableResult
     func assertUpcoming(
         _ listingID: String,

@@ -41,17 +41,24 @@ finding the next tournament to play — fast and delightful:
   events, and rating changes on every row. **Tap a player to see each round** — the
   opponent, their rating, and an **estimated rating change for both players**
   (US Chess only publishes the event total; estimates always add up to it).
-- **🗺️ Upcoming tournaments** — US Chess tournaments **near you** (25 / 50 / 100 /
-  200 mi, this weekend / 30 days / 3 months, scholastic / quads / Grand Prix) plus
-  nationwide **major events**. Each tournament shows the date and weekday, a venue
-  map with **directions**, a **Register** button, the full announcement, and
-  organizer contacts.
+- **🗺️ Upcoming tournaments** — US Chess tournaments **near you** (10 mi for dense
+  cities up to 500 mi for big states; this weekend / 30 days / 3 months; scholastic /
+  quads / Grand Prix) plus nationwide **major events**. Each tournament shows the
+  date and weekday, a venue map with **directions**, a **Register** button, organizer
+  contacts, and the full announcement **as the organizer formatted it** — bold,
+  headings, bullets, and tappable links, emails and phone numbers — with a **Copy**
+  button that keeps each link's address.
+- **🏆 Best wins** — on My Card and every profile: the highest-rated opponents a
+  player has beaten in Regular play, **rated as they were on the day of the game**,
+  how far above the player that was, and their Top 100 badge. Each win opens its
+  crosstable; an ⓘ explains the card in plain words.
 - **🏅 Top 100 by age** — browse US Chess's monthly Top 100 lists (age 7 & under
   through 18, girls, 50+, 65+; Regular / Quick / Blitz; your state only). Players on
   a list get a badge like **#37 · Age 9** everywhere they appear — My Card,
   profiles, Watching, search results, and tournament standings.
 - **🔍 Search** — one field for players (name or 8-digit member ID) and tournaments
-  (12-digit event ID), plus a shortcut to the Top 100 lists.
+  (12-digit event ID), plus shortcuts to the Top 100 lists and to **join or renew
+  US Chess membership**.
 - **👤 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
   by side, USCF class title, rankings, full event history, and a tap-to-copy
   member ID.
@@ -141,11 +148,13 @@ modes — the UI only ever sees the domain models.
 4. **Open a tournament.** Tap any event (or go to **Events → Results** and paste a
    12-digit event ID). Pick a section from the section picker, then **tap any row**
    to see each round with estimated rating changes for both players. Followed
-   players are outlined in gold and auto-scrolled to.
+   players are outlined in gold and auto-scrolled to. Going back returns you to the
+   same spot in the list, with the event you opened outlined in gold.
 5. **Find the next tournament.** **Events → Upcoming → Near me** lists US Chess
    tournaments around your current location (or a city/ZIP you type). Tap one for
    the map, directions, and the **Register** link. **Major events** lists national
-   championships and big-prize events nationwide.
+   championships and big-prize events nationwide. Tap **Copy** on an announcement
+   to paste it into a message with its links intact.
 6. **Save a tournament for later.** On any tournament, tap **🔖 Save**. Saved
    tournaments collect at the top of **Watching**, soonest first — swipe to remove.
    Details are kept locally, so a saved event stays readable after the US Chess
@@ -156,8 +165,12 @@ modes — the UI only ever sees the domain models.
 8. **Browse the Top 100.** **Search → Top 100 lists** shows the best players by age,
    girls, and seniors — or just your state. Badges like **#37 · Age 9** show up next
    to ranked players everywhere in the app.
-9. **Track changes.** OpenBoard polls followed players in the background and fires a
-   local notification when a rating updates.
+9. **See your best wins.** Scroll My Card (or any profile) to **Best wins**. The first
+   look at a very active player can take a few minutes — the card shows progress
+   ("Analyzing 1,145 games · 42 of 225 events") and fills in as wins are found;
+   after that it's instant.
+10. **Track changes.** OpenBoard polls followed players in the background and fires a
+    local notification when a rating updates.
 
 No account or sign-in. Reads fully from cache when offline, and ships a **zero-network
 demo mode** (`-mock` launch argument) with synthetic sample data.
@@ -207,6 +220,7 @@ All of these returned **200 with real JSON**:
 | Tournament (with section list) | `GET /rated-events/{eventId}` |
 | Section metadata | `GET /rated-events/{eventId}/sections/{number}` |
 | **Crosstable standings** (with round-by-round) | `GET /rated-events/{eventId}/sections/{number}/standings` |
+| Every rated game (opponent + result, **no ratings**) | `GET /members/{memberId}/games?RatingSource=R` |
 | Top 100 list catalog (age / gender / rating type) | `GET /top-players` |
 | One Top 100 list (monthly) | `GET /top-players/{listId}` |
 
@@ -284,6 +298,13 @@ the iPad's round-by-round pills.
 - **No ages or birth dates.** Being on a Top 100 age list is the only age signal, so
   badges come from indexing the lists (`TopListsIndex`, cached 12 h).
 - **Score is numeric** (`4.0`, `2.5`); formatted to `"3.0"` display strings.
+- **Rate limit: about 100 requests a minute**, then `429` for ~40 s, with no
+  `Retry-After` or rate-limit headers (measured). Requests wait and retry
+  (4 / 10 / 20 / 30 s) instead of failing the screen.
+- **Games carry no ratings.** Best wins reads opponents' pre-event ratings from each
+  section's standings — one request per section with a win, one a second, strongest
+  sections first, stopping once no better win is plausible. Rated sections never
+  change, so they're cached for good.
 - No auth is required; the app sends `User-Agent: OpenBoard-iOS/1.0`.
 
 ### What was mocked
@@ -402,7 +423,7 @@ xcodebuild test -project OpenBoard.xcodeproj -scheme OpenBoard \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 
-### Unit tests — Swift Testing, 31 tests, one suite per area
+### Unit tests — Swift Testing, 44 tests, one suite per area
 
 ```
 OpenBoardTests/
@@ -411,15 +432,18 @@ OpenBoardTests/
 ├── DeltaTests               rating deltas + clock-digit formatting
 ├── CacheTests               cache TTL (fresh / stale / miss / stale served on failure)
 ├── RoundEstimateTests       per-round estimates add up to the official change
-├── UpcomingTournamentTests  parsing saved US Chess pages (search, announcement, Plan Ahead)
+├── UpcomingTournamentTests  parsing saved US Chess pages (search, announcement, Plan Ahead),
+│                            announcement HTML → Markdown, copy text, distance options
 ├── TopListTests             Top 100 lists, labels, badge index, multi-page loading
+├── BestWinsTests            games decoding, ranking, scan order, early stop, cached rescan
+├── RateLimitTests           429 retry and the "too many requests" error (stub URLProtocol)
 └── Support/                 FixtureLoader, TestContainer (in-memory SwiftData)
 ```
 
 Fixtures use **synthetic data that mirrors the real API shape**, plus saved copies of
 the US Chess tournament pages.
 
-### UI tests — XCTest, 16 tests, page objects
+### UI tests — XCTest, 25 tests, page objects
 
 ```
 OpenBoardUITests/
@@ -431,7 +455,7 @@ OpenBoardUITests/
 │       SearchView, TopListsView, EventsView, TournamentDetailView, WatchingView
 └── Tests/                         SearchTests, RatingHistoryTests, CrosstableTests,
                                    UpcomingTournamentTests, TopListsTests,
-                                   SavedTournamentTests
+                                   SavedTournamentTests, BestWinsTests
 ```
 
 - **Elements are found by accessibility ID only.** IDs live in `Shared/AccessibilityID.swift`,
@@ -475,7 +499,7 @@ All green on the iOS 26.5 simulator.
 - ✅ Runs fully on mock data with **zero network** (`-mock`).
 - ✅ Flips to live data by changing one `AppEnvironment` flag — **and the probe
   succeeded, so live is already the default.**
-- ✅ Unit + UI tests pass (31 unit, 16 UI).
+- ✅ Unit + UI tests pass (44 unit, 25 UI).
 - ✅ Screenshots of every screen on iPhone 17 Pro and iPad Pro 13", dark and light.
 - ✅ App icon ships light, dark and tinted appearances.
 
@@ -492,6 +516,12 @@ All green on the iOS 26.5 simulator.
 | Upcoming near me | Tournament detail (saved) | Top 100 by age | Watching (saved + players) | Search |
 |:---:|:---:|:---:|:---:|:---:|
 | ![Upcoming](Screenshots/iphone-upcoming.png) | ![Tournament](Screenshots/iphone-tournament.png) | ![Top 100](Screenshots/iphone-top100.png) | ![Watching](Screenshots/iphone-watchlist.png) | ![Search](Screenshots/iphone-search.png) |
+
+### What's new
+
+| Best wins | Best wins ⓘ | Formatted announcement + Copy | Distance 10–500 mi | Back to where you were |
+|:---:|:---:|:---:|:---:|:---:|
+| ![Best wins](Screenshots/iphone-bestwins.png) | ![Best wins explained](Screenshots/iphone-bestwins-info.png) | ![Announcement](Screenshots/iphone-announcement.png) | ![Distance](Screenshots/iphone-distance.png) | ![Opened row outlined after going back](Screenshots/iphone-back-marked.png) |
 
 ### Light mode
 

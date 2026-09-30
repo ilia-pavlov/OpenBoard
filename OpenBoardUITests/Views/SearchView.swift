@@ -26,6 +26,12 @@ final class SearchView: BaseView {
         tap(AccessibilityID.searchResult(memberID), file: file, line: line)
     }
 
+    /// The Join / renew US Chess row under Top 100 (opens Safari, so not tapped).
+    @discardableResult
+    func assertJoinUSChess(file: StaticString = #filePath, line: UInt = #line) -> Self {
+        assertExists(AccessibilityID.browseJoinUSChess, file: file, line: line)
+    }
+
     @discardableResult
     func tapTop100(file: StaticString = #filePath, line: UInt = #line) -> Self {
         tap(AccessibilityID.browseTop100, file: file, line: line)

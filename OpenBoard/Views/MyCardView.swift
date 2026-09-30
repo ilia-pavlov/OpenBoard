@@ -123,6 +123,7 @@ struct MyCardView: View {
                 }
                 .buttonStyle(.plain)
                 .onOpen { lastOpenedEventID = event.id }
+                .accessibilityIdentifier(AccessibilityID.recentEvent(event.id))
             }
         }
     }
