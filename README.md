@@ -1,3 +1,4 @@
+[![API monitor](https://github.com/ilia-pavlov/OpenBoard/actions/workflows/api-monitor.yml/badge.svg)](https://github.com/ilia-pavlov/OpenBoard/actions/workflows/api-monitor.yml)
 [![CI](https://github.com/ilia-pavlov/OpenBoard/actions/workflows/ci.yml/badge.svg)](https://github.com/ilia-pavlov/OpenBoard/actions/workflows/ci.yml)
 <h1 align="center">♟️ OpenBoard</h1>
 
