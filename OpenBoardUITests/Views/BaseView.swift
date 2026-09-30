@@ -106,6 +106,83 @@ class BaseView {
         return self
     }
 
+    /// Where the element sits on screen, to check a list kept its scroll position.
+    func top(of id: String) -> CGFloat {
+        element(id).frame.minY
+    }
+
+    /// The row opened last is marked selected when the user comes back to the list.
+    @discardableResult
+    func assertSelected(
+        _ id: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        let row = element(id).assertExistence(file: file, line: line)
+        XCTAssertTrue(row.isSelected, "'\(id)' isn't marked as last opened", file: file, line: line)
+        return self
+    }
+
+    /// Opens the row, comes back, and checks the list didn't move and the row is
+    /// marked: the "back keeps my place" behavior every event list shares.
+    @discardableResult
+    func assertBackKeepsPlace(
+        of id: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        scrollTo(id, file: file, line: line)
+        // Pull the row up to mid-screen so the list is really scrolled: at the
+        // very top there is no position to lose.
+        let screenHeight = app.windows.firstMatch.frame.height
+        var drags = 0
+        while top(of: id) > screenHeight * 0.45, drags < 6 {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+            drags += 1
+        }
+        let before = top(of: id)
+        element(id).tap()
+        goBack(file: file, line: line)
+        element(id).assertExistence(file: file, line: line)
+        XCTAssertEqual(top(of: id), before, accuracy: 1, "List moved after coming back", file: file, line: line)
+        return assertSelected(id, file: file, line: line)
+    }
+
+    // MARK: - Best wins (My Card and player profiles)
+
+    /// A Best wins row, found by the opponent's member ID; `mentions` are parts
+    /// of its spoken label (name, rating, Top 100 rank).
+    @discardableResult
+    func assertBestWin(
+        _ opponentID: String,
+        mentions parts: [String] = [],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        scrollTo(AccessibilityID.bestWin(opponentID), file: file, line: line)
+        let label = element(AccessibilityID.bestWin(opponentID)).label
+        for part in parts {
+            XCTAssertTrue(label.contains(part), "Best win '\(label)' lacks '\(part)'", file: file, line: line)
+        }
+        return self
+    }
+
+    @discardableResult
+    func tapBestWin(
+        _ opponentID: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        scrollToAndTap(AccessibilityID.bestWin(opponentID), file: file, line: line)
+    }
+
+    @discardableResult
+    func openBestWinsInfo(file: StaticString = #filePath, line: UInt = #line) -> Self {
+        scrollToAndTap(AccessibilityID.bestWinsInfo, file: file, line: line)
+        return assertExists(AccessibilityID.bestWinsInfoPopover, file: file, line: line)
+    }
+
     // MARK: - Tabs
 
     /// Switches tabs by visible label. Tab bar buttons are the one documented

@@ -130,9 +130,19 @@ final class CachedRatingsService: RatingsProviding, Sendable {
     let upstream: any RatingsProviding
     let cache: CacheStore
 
-    init(upstream: any RatingsProviding, container: ModelContainer) {
+    /// Gap between standings requests during a best-wins scan. The API allows
+    /// roughly 100 requests a minute; one a second leaves room for the screens
+    /// people open. Tests pass zero.
+    let scanSpacing: Duration
+
+    init(
+        upstream: any RatingsProviding,
+        container: ModelContainer,
+        scanSpacing: Duration = .seconds(1)
+    ) {
         self.upstream = upstream
         self.cache = CacheStore(modelContainer: container)
+        self.scanSpacing = scanSpacing
     }
 
     func player(id: String) async throws -> Player {
@@ -181,10 +191,6 @@ final class CachedRatingsService: RatingsProviding, Sendable {
     /// New wins only arrive when an event is rated; a few hours is fresh enough.
     private static let winsTTL: TimeInterval = 6 * 60 * 60
 
-    /// Gap between standings requests during a scan. The API allows roughly 100
-    /// requests a minute; one a second leaves room for the screens people open.
-    private static let scanSpacing: Duration = .seconds(1)
-
     /// Finds the player's `limit` best wins by the opponent's pre-event Regular
     /// rating, reporting progress after every section.
     ///
@@ -224,7 +230,7 @@ final class CachedRatingsService: RatingsProviding, Sendable {
                         } else {
                             try Task.checkCancellation()
                             preRatings[key] = try? await regularPreRatings(eventID: key.eventID, section: key.section)
-                            try await Task.sleep(for: Self.scanSpacing)
+                            try await Task.sleep(for: scanSpacing)
                         }
                         checked += 1
                         best = BestWins.rank(record.wins,

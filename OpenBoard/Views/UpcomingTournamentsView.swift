@@ -180,6 +180,7 @@ struct UpcomingTournamentsSection: View {
                     }
                     .buttonStyle(.plain)
                     .onOpen { lastOpenedID = listing.id }
+                    .accessibilityIdentifier(AccessibilityID.upcoming(listing.id))
                 }
             }
             Text("Listings from US Chess Tournament Life Announcements.")

@@ -94,6 +94,14 @@ struct UpcomingTournamentTests {
         #expect(TournamentParser.markdown(fromHTML: html) == markdown)
     }
 
+    /// 10 mi for dense cities up to 500 mi for big states; the stored raw value
+    /// (miles) is unchanged, so a distance saved by an older build still loads.
+    @Test func distanceOptionsCoverCitiesAndBigStates() throws {
+        #expect(SearchRadius.allCases.map(\.rawValue) == [10, 25, 50, 100, 200, 300, 500])
+        #expect(SearchRadius(rawValue: 50) == .mi50)
+        #expect(SearchRadius.mi500.title == "500 mi")
+    }
+
     @Test func parsesPlanAheadCalendar() throws {
         let events = TournamentParser.majorEvents(from: try fixtureText("plan_ahead", "html"))
         let masters = try #require(events.first { $0.name.hasPrefix("US Masters") })

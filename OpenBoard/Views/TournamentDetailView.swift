@@ -290,6 +290,7 @@ struct TournamentDetailContent: View {
         .buttonStyle(.plain)
         .sensoryFeedback(.success, trigger: copiedAnnouncement) { _, new in new }
         .accessibilityLabel("Copy announcement")
+        .accessibilityValue(copiedAnnouncement ? "Copied" : "")
         .accessibilityHint(copiedAnnouncement ? "Copied" : "Double-tap to copy the full announcement")
         .accessibilityIdentifier(AccessibilityID.copyAnnouncement)
     }

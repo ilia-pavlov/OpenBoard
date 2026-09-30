@@ -10,14 +10,21 @@ actor LiveRatingsService: RatingsProviding {
     private var inflight: [URL: Task<Data, Error>] = [:]
     private var cachedMaxRanks: [APIMaxRank]?
 
-    init() {
+    /// Seconds to wait before each retry of a rate-limited (429) request; the
+    /// last entry is never waited on.
+    private let rateLimitBackoff: [Double]
+
+    /// Tests pass a stub `URLProtocol` and no backoff; the app uses the defaults.
+    init(protocolClasses: [AnyClass] = [], rateLimitBackoff: [Double] = LiveRatingsService.defaultBackoff) {
         let config = URLSessionConfiguration.ephemeral
         config.httpAdditionalHeaders = [
             "User-Agent": AppEnvironment.userAgent,
             "Accept": "application/json",
         ]
         config.timeoutIntervalForRequest = 20
+        if !protocolClasses.isEmpty { config.protocolClasses = protocolClasses }
         session = URLSession(configuration: config)
+        self.rateLimitBackoff = rateLimitBackoff
     }
 
     // MARK: RatingsProviding
@@ -155,24 +162,23 @@ actor LiveRatingsService: RatingsProviding {
         return try decoder.decode(T.self, from: data)
     }
 
-    /// Seconds to wait before each retry of a rate-limited (429) request; the
-    /// last entry is never waited on. Adds up to about a minute, the API's window.
-    private static let rateLimitBackoff: [Double] = [4, 10, 20, 30, 0]
+    /// Adds up to about a minute, the API's rate-limit window.
+    static let defaultBackoff: [Double] = [4, 10, 20, 30, 0]
 
     private func fetchData(_ url: URL) async throws -> Data {
         if let existing = inflight[url] {
             return try await existing.value
         }
-        let task = Task<Data, Error> { [session] in
+        let task = Task<Data, Error> { [session, rateLimitBackoff] in
             // The API allows roughly 100 requests a minute and then answers 429 for
             // about 40 seconds. Wait it out rather than failing the screen.
-            for (attempt, backoff) in Self.rateLimitBackoff.enumerated() {
+            for (attempt, backoff) in rateLimitBackoff.enumerated() {
                 do {
                     let (data, response) = try await session.data(from: url)
                     if let http = response as? HTTPURLResponse {
                         if http.statusCode == 404 { throw RatingsError.notFound }
                         if http.statusCode == 429 {
-                            guard attempt < Self.rateLimitBackoff.count - 1 else { throw RatingsError.rateLimited }
+                            guard attempt < rateLimitBackoff.count - 1 else { throw RatingsError.rateLimited }
                             let retryAfter = (http.value(forHTTPHeaderField: "Retry-After")).flatMap(Double.init)
                             try await Task.sleep(for: .seconds(retryAfter ?? backoff))
                             continue

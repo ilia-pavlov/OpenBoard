@@ -49,8 +49,14 @@ struct BestWinsTests {
 
     @Test func stopsOnlyWhenNoBetterWinIsPlausible() {
         let best = [1900, 1850, 1800].map { rating in
-            NotableWin(opponentID: "\(rating)", opponentName: "", opponentRating: rating, playerRating: nil,
-                       eventID: "E", eventName: "", section: 1, date: nil)
+            NotableWin(opponentID: "\(rating)",
+                       opponentName: "",
+                       opponentRating: rating,
+                       playerRating: nil,
+                       eventID: "E",
+                       eventName: "",
+                       section: 1,
+                       date: nil)
         }
         #expect(BestWins.canStop(best: best, limit: 3, nextPlayerRating: 999))       // 999 + 800 < 1800
         #expect(!BestWins.canStop(best: best, limit: 3, nextPlayerRating: 1000))     // an 800-point upset could tie
@@ -73,6 +79,38 @@ struct BestWinsTests {
         #expect(steps.first?.eventsChecked == 0) // progress shows before any section loads
     }
 
+    @Test @MainActor func scanStopsOnceNoBetterWinIsPlausible() async throws {
+        let upstream = ScriptedUpstream()
+        let service = CachedRatingsService(upstream: upstream,
+                                           container: try TestContainer.inMemory(),
+                                           scanSpacing: .zero)
+        let last = try await finalStep(of: service.bestWinsScan(memberID: ScriptedUpstream.playerID))
+
+        #expect(last.isFinished)
+        #expect(last.wins.map(\.opponentID) == ["A", "B", "C"])
+        #expect(last.eventsTotal == 5)
+        #expect(last.eventsChecked == 3)                 // S4 (player 600) can't beat 1500
+        #expect(await upstream.standingsRequests == 3)
+    }
+
+    @Test @MainActor func rescanReusesCachedSections() async throws {
+        let upstream = ScriptedUpstream()
+        let service = CachedRatingsService(upstream: upstream,
+                                           container: try TestContainer.inMemory(),
+                                           scanSpacing: .zero)
+        let first = try await finalStep(of: service.bestWinsScan(memberID: ScriptedUpstream.playerID))
+        let second = try await finalStep(of: service.bestWinsScan(memberID: ScriptedUpstream.playerID))
+
+        #expect(second.wins == first.wins)
+        #expect(await upstream.standingsRequests == 3)   // nothing fetched the second time
+    }
+
+    private func finalStep(of scan: AsyncThrowingStream<BestWinsProgress, Error>) async throws -> BestWinsProgress {
+        var last: BestWinsProgress?
+        for try await step in scan { last = step }
+        return try #require(last)
+    }
+
     private func win(_ opponent: String, _ key: SectionKey, daysAgo: Int) -> RatedWin {
         RatedWin(opponentID: opponent,
                  opponentName: opponent.capitalized,
@@ -81,4 +119,56 @@ struct BestWinsTests {
                  section: key.section,
                  date: Date.now.addingTimeInterval(-Double(daysAgo) * 86_400))
     }
+}
+
+/// Five sections, strongest first by the player's own rating (1500 → 500), one
+/// win each; counts standings requests. After A, B and C the third-best win is
+/// 1500, and S4's player (600) would need a 900-point upset to beat it.
+private actor ScriptedUpstream: RatingsProviding {
+    static let playerID = MockRatingsService.samplePlayerID
+
+    private(set) var standingsRequests = 0
+
+    private let sections: [(event: String, player: Int, opponent: String, rating: Int)] = [
+        ("S1", 1500, "A", 1600),
+        ("S2", 1400, "B", 1550),
+        ("S3", 1300, "C", 1500),
+        ("S4", 600, "D", 1300),
+        ("S5", 500, "E", 1200),
+    ]
+
+    func player(id: String) async throws -> Player {
+        var player = MockRatingsService.samplePlayer
+        player.events = sections.map { section in
+            EventResult(id: section.event,
+                        name: section.event,
+                        date: nil,
+                        score: nil,
+                        regular: PrePost(pre: section.player, post: nil, games: nil),
+                        quick: nil)
+        }
+        return player
+    }
+
+    func regularWins(memberID: String) async throws -> RatedWins {
+        RatedWins(gameCount: 10, wins: sections.map { section in
+            RatedWin(opponentID: section.opponent,
+                     opponentName: section.opponent,
+                     eventID: section.event,
+                     eventName: section.event,
+                     section: 1,
+                     date: nil)
+        })
+    }
+
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
+        standingsRequests += 1
+        guard let match = sections.first(where: { $0.event == eventID }) else { return [:] }
+        return [Self.playerID: match.player, match.opponent: match.rating]
+    }
+
+    func search(_ query: String) async throws -> [PlayerSummary] { [] }
+    func event(id: String) async throws -> ChessEvent { throw RatingsError.notFound }
+    func topListDefinitions() async throws -> [TopListDefinition] { [] }
+    func topList(_ definition: TopListDefinition) async throws -> TopList { throw RatingsError.notFound }
 }
