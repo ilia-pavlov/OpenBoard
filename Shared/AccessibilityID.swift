@@ -40,6 +40,7 @@ enum AccessibilityID {
     // News
     static func newsArticle(_ link: String) -> String { "news-article-\(link)" }
     static func newsRange(_ range: String) -> String { "news-range-\(range)" }
+    static func newsSource(_ source: String) -> String { "news-source-\(source)" }
     static let bestWinsInfo = "best-wins-info"
     static let bestWinsInfoPopover = "best-wins-info-popover"
     /// A row of My Card's Recent events.
