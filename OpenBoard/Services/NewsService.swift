@@ -1,31 +1,29 @@
 import Foundation
 
-/// News comes from the US Chess website's RSS feeds (10 newest articles per
-/// feed, full text inside). An article's clean body comes from the site's JSON
-/// view of the page (`?_format=json`), the same trick announcements use.
+/// News comes from the US Chess website's RSS feeds: the main feed plus topic
+/// feeds, merged, newest first. Articles themselves open on the website.
 protocol NewsProviding: Sendable {
-    func articles(_ topic: NewsTopic) async throws -> [NewsArticle]
-    /// The article body as inline Markdown (see `TournamentParser.markdown(fromHTML:)`).
-    func body(of article: NewsArticle) async throws -> String
+    /// Articles from the last `NewsFeeds.window`, newest first, without duplicates.
+    func latest() async throws -> [NewsArticle]
 }
 
 struct LiveNewsService: NewsProviding {
-    func articles(_ topic: NewsTopic) async throws -> [NewsArticle] {
-        NewsParser.articles(fromRSS: try await fetch(topic.feedURL))
-    }
-
-    func body(of article: NewsArticle) async throws -> String {
-        guard var components = URLComponents(url: article.link, resolvingAgainstBaseURL: false) else {
-            throw RatingsError.badURL
+    func latest() async throws -> [NewsArticle] {
+        // A topic feed that fails is skipped; only all of them failing is an error.
+        let results = await withTaskGroup(of: Result<[NewsArticle], Error>.self) { group in
+            for url in NewsFeeds.urls {
+                group.addTask {
+                    do { return .success(NewsParser.articles(fromRSS: try await fetch(url))) }
+                    catch { return .failure(error) }
+                }
+            }
+            var all: [Result<[NewsArticle], Error>] = []
+            for await result in group { all.append(result) }
+            return all
         }
-        components.queryItems = [URLQueryItem(name: "_format", value: "json")]
-        guard let url = components.url else { throw RatingsError.badURL }
-        struct Node: Decodable {
-            struct Value: Decodable { let value: String? }
-            let body: [Value]?
-        }
-        let html = try JSONDecoder().decode(Node.self, from: try await fetch(url)).body?.first?.value ?? ""
-        return TournamentParser.markdown(fromHTML: html)
+        let feeds = results.compactMap { try? $0.get() }
+        if feeds.isEmpty, case .failure(let error)? = results.first { throw error }
+        return NewsParser.merge(feeds.flatMap { $0 })
     }
 
     private func fetch(_ url: URL) async throws -> Data {
@@ -45,54 +43,36 @@ struct LiveNewsService: NewsProviding {
     }
 }
 
-/// Caches feeds for 15 minutes and article bodies for a day, and serves the
-/// last copy when the site can't be reached.
+/// Caches the merged list for 15 minutes and serves the last copy offline.
 final class CachedNewsService: Sendable {
     let upstream: any NewsProviding
     let cache: CacheStore
 
-    private static let feedTTL: TimeInterval = 15 * 60
-    private static let bodyTTL: TimeInterval = 24 * 60 * 60
+    private static let key = "news-latest"
+    private static let ttl: TimeInterval = 15 * 60
 
     init(upstream: any NewsProviding, cache: CacheStore) {
         self.upstream = upstream
         self.cache = cache
     }
 
-    func articles(_ topic: NewsTopic, force: Bool = false) async throws -> [NewsArticle] {
-        try await cached(key: "news-\(topic.rawValue)", ttl: Self.feedTTL, force: force) {
-            try await self.upstream.articles(topic)
-        }
-    }
-
-    func body(of article: NewsArticle) async throws -> String {
-        try await cached(key: "news-body-\(article.id)", ttl: Self.bodyTTL, force: false) {
-            try await self.upstream.body(of: article)
-        }
-    }
-
-    /// Last stored feed regardless of age, for the offline error state.
-    func cachedArticles(_ topic: NewsTopic) async -> ([NewsArticle], Date)? {
-        await cache.read([NewsArticle].self, key: "news-\(topic.rawValue)").map { ($0.value, $0.updatedAt) }
-    }
-
-    private func cached<T: Codable & Sendable>(
-        key: String,
-        ttl: TimeInterval,
-        force: Bool,
-        fetch: @Sendable () async throws -> T
-    ) async throws -> T {
-        if !force, let entry = await cache.read(T.self, key: key, ttl: ttl), entry.isFresh {
+    func latest(force: Bool = false) async throws -> [NewsArticle] {
+        if !force, let entry = await cache.read([NewsArticle].self, key: Self.key, ttl: Self.ttl), entry.isFresh {
             return entry.value
         }
         do {
-            let fresh = try await fetch()
-            await cache.write(fresh, key: key)
+            let fresh = try await upstream.latest()
+            await cache.write(fresh, key: Self.key)
             return fresh
         } catch {
-            if let stale = await cache.read(T.self, key: key) { return stale.value }
+            if let stale = await cache.read([NewsArticle].self, key: Self.key) { return stale.value }
             throw error
         }
+    }
+
+    /// Last stored list regardless of age, for the offline error state.
+    func cachedLatest() async -> ([NewsArticle], Date)? {
+        await cache.read([NewsArticle].self, key: Self.key).map { ($0.value, $0.updatedAt) }
     }
 }
 
@@ -109,6 +89,16 @@ enum NewsParser {
         return collector.items.compactMap(article)
     }
 
+    /// One list from several feeds: duplicates dropped, only the recent window,
+    /// newest first.
+    static func merge(_ articles: [NewsArticle], now: Date = .now) -> [NewsArticle] {
+        var seen = Set<String>()
+        return articles
+            .filter { seen.insert($0.id).inserted }
+            .filter { ($0.published.map { now.timeIntervalSince($0) } ?? .infinity) <= NewsFeeds.window }
+            .sorted { ($0.published ?? .distantPast) > ($1.published ?? .distantPast) }
+    }
+
     private static func article(_ item: RSSItemCollector.Item) -> NewsArticle? {
         guard let link = URL(string: item.link.trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
         let title = TournamentParser.clean(item.title)
@@ -118,29 +108,27 @@ enum NewsParser {
                            link: link,
                            author: author.isEmpty ? nil : author,
                            published: date(item.pubDate),
-                           imageURLs: imageURLs(in: item.description),
+                           imageURL: leadImage(in: item.description),
                            summary: summary(of: item.description))
     }
 
-    /// Photos in the article. The feed lazy-loads images: `src` is an empty SVG
+    /// The article's first photo. The feed lazy-loads images: `src` is an empty SVG
     /// placeholder and the real (site-relative) address is in `data-src`/`srcset`.
-    static func imageURLs(in html: String) -> [URL] {
-        var seen = Set<String>()
-        var urls: [URL] = []
+    static func leadImage(in html: String) -> URL? {
         for tag in TournamentParser.captures(#"(<img[^>]*>)"#, in: html) {
             let candidates = ["data-src", "srcset", "data-srcset", "src"].compactMap { attribute in
                 TournamentParser.captures(#"\#(attribute)="([^"]+)""#, in: tag).first
             }
             guard let raw = candidates.first(where: { !$0.hasPrefix("data:") }) else { continue }
             let path = TournamentParser.unescape(raw.split(separator: " ").first.map(String.init) ?? raw)
-            guard path.contains("/files/"), let url = URL(string: path, relativeTo: site)?.absoluteURL,
-                  seen.insert(url.path()).inserted else { continue }
-            urls.append(url)
+            if path.contains("/files/"), let url = URL(string: path, relativeTo: site)?.absoluteURL {
+                return url
+            }
         }
-        return urls
+        return nil
     }
 
-    /// The first real paragraph of the article, trimmed to a couple of lines.
+    /// The first real paragraph of the article, trimmed to a few lines.
     static func summary(of html: String) -> String {
         for paragraph in TournamentParser.captures(#"(?s)<p[^>]*>(.*?)</p>"#, in: html) {
             let text = TournamentParser.clean(paragraph)
@@ -222,39 +210,30 @@ private final class RSSItemCollector: NSObject, XMLParserDelegate {
 /// Synthetic articles for demo mode and UI tests (no network).
 struct MockNewsService: NewsProviding {
     static let articles: [NewsArticle] = [
-        NewsArticle(title: "Sample Scholastic Open Draws Record Field",
-                    link: URL(string: "https://new.uschess.org/news/sample-scholastic-open-record-field")!,
-                    author: "Sample Staff",
-                    published: Date.now.addingTimeInterval(-3 * 3_600),
-                    imageURLs: [],
-                    summary: "More than 400 players from 12 states filled the ballroom for the Sample Scholastic Open, the largest field in the event's history."),
-        NewsArticle(title: "Tactics Tuesday: A Sample Back-Rank Trick",
-                    link: URL(string: "https://new.uschess.org/news/tactics-tuesday-sample-back-rank")!,
-                    author: "Sample Coach",
-                    published: Date.now.addingTimeInterval(-2 * 86_400),
-                    imageURLs: [],
-                    summary: "White to move and win. The defender's king has no escape square, and one quiet move makes the difference."),
-        NewsArticle(title: "Registration Opens for the Sample Grade Nationals",
-                    link: URL(string: "https://new.uschess.org/news/sample-grade-nationals-registration")!,
-                    author: "Sample Staff",
-                    published: Date.now.addingTimeInterval(-6 * 86_400),
-                    imageURLs: [],
-                    summary: "Players in kindergarten through 12th grade can now register for the Sample Grade Nationals, held over three days in December."),
-        NewsArticle(title: "Sample Club Wins State Team Championship",
-                    link: URL(string: "https://new.uschess.org/news/sample-club-state-team")!,
-                    author: "Sample Reporter",
-                    published: Date.now.addingTimeInterval(-12 * 86_400),
-                    imageURLs: [],
-                    summary: "A late comeback in the final round gave the Sample Chess Club its first state team title since 2019."),
+        article("Sample Scholastic Open Draws Record Field", hoursAgo: 3,
+                "More than 400 players from 12 states filled the ballroom for the Sample Scholastic Open, the largest field in the event's history."),
+        article("Tactics Tuesday: A Sample Back-Rank Trick", hoursAgo: 30,
+                "White to move and win. The defender's king has no escape square, and one quiet move makes the difference."),
+        article("Registration Opens for the Sample Grade Nationals", hoursAgo: 100,
+                "Players in kindergarten through 12th grade can now register for the Sample Grade Nationals, held over three days in December."),
+        article("Sample Club Wins State Team Championship", hoursAgo: 12 * 24,
+                "A late comeback in the final round gave the Sample Chess Club its first state team title since 2019."),
+        article("Five Endgames Every Scholastic Player Should Know", hoursAgo: 20 * 24,
+                "From the lucida position to the square of the pawn, a sample coach picks the endings that decide junior games."),
     ]
 
-    func articles(_ topic: NewsTopic) async throws -> [NewsArticle] {
-        try await Task.sleep(for: .milliseconds(250))
-        return topic == .all ? Self.articles : Array(Self.articles.prefix(2))
+    private static func article(_ title: String, hoursAgo: Double, _ summary: String) -> NewsArticle {
+        let slug = title.lowercased().filter { $0.isLetter || $0 == " " }.replacingOccurrences(of: " ", with: "-")
+        return NewsArticle(title: title,
+                           link: URL(string: "https://new.uschess.org/news/\(slug)")!,
+                           author: "Sample Staff",
+                           published: Date.now.addingTimeInterval(-hoursAgo * 3_600),
+                           imageURL: nil,
+                           summary: summary)
     }
 
-    func body(of article: NewsArticle) async throws -> String {
-        try await Task.sleep(for: .milliseconds(200))
-        return "\(article.summary)\n\n**Final standings**\n1 · Ava Sterling · 4.0\n2 · Alex Rivera · 3.0\n\nFull results and photos are on [US Chess](<\(article.link.absoluteString)>)."
+    func latest() async throws -> [NewsArticle] {
+        try await Task.sleep(for: .milliseconds(250))
+        return Self.articles
     }
 }

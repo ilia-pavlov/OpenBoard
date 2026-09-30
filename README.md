@@ -62,11 +62,11 @@ finding the next tournament to play — fast and delightful:
 - **👤 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
   by side, USCF class title, rankings, full event history, and a tap-to-copy
   member ID.
-- **📰 News** — the latest US Chess articles, with topic filters (scholastic,
-  national events, top Americans, women, annotated games, Tactics Tuesday, kids,
-  podcast, international). Each article opens with its photos and full text, links
-  intact, plus Share and *Read on US Chess*. Read from the site's RSS feeds; cached
-  for offline reading.
+- **📰 News** — the last two months of US Chess articles in one feed: the newest
+  as a full-bleed photo, this week's as large cards, older ones in a grid. Articles
+  open on the website inside the app, where they read best. Built from the site's
+  main RSS feed merged with its topic feeds (about 30 articles instead of 10);
+  cached for offline browsing.
 - **❤️ Watching** — follow your kid, rivals, and teammates; get a local notification
   when a followed player's rating changes.
 

@@ -37,8 +37,6 @@ extension View {
                 TopListsBrowseView()
             case .topList(let id, let highlight):
                 TopListView(id: id, highlight: highlight)
-            case .newsArticle(let article):
-                NewsArticleView(article: article)
             }
         }
     }

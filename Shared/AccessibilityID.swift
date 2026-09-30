@@ -15,7 +15,6 @@ enum AccessibilityID {
         static let topLists = "screen-top-lists"
         static let watching = "screen-watching"
         static let news = "screen-news"
-        static let newsArticle = "screen-news-article"
     }
 
     // MARK: Shared
@@ -39,7 +38,6 @@ enum AccessibilityID {
     static let profileRatingCard = "profile-rating-card"
     static let bestWins = "best-wins"
     // News
-    static func newsTopic(_ topic: String) -> String { "news-topic-\(topic)" }
     static func newsArticle(_ link: String) -> String { "news-article-\(link)" }
     static let bestWinsInfo = "best-wins-info"
     static let bestWinsInfoPopover = "best-wins-info-popover"

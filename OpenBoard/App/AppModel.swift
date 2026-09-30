@@ -11,7 +11,6 @@ enum Destination: Hashable {
     case majorEvent(MajorEvent)
     case topLists
     case topList(id: String, highlight: String?)
-    case newsArticle(NewsArticle)
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
