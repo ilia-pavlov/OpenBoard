@@ -1,0 +1,170 @@
+{
+  "items": [
+    {
+      "section": {
+        "id": "01SYNTHETIC00011",
+        "number": 1,
+        "name": "SECTION 1"
+      },
+      "event": {
+        "id": "900000000001",
+        "name": "SAMPLE SCHOLASTIC OPEN 2026",
+        "startDate": "2026-08-06",
+        "endDate": "2026-08-06",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "D",
+      "player": {
+        "color": "White",
+        "outcome": "Win"
+      },
+      "opponent": {
+        "id": "90000005",
+        "firstName": "OWEN",
+        "lastName": "PRICE",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Loss"
+      }
+    },
+    {
+      "section": {
+        "id": "01SYNTHETIC00022",
+        "number": 2,
+        "name": "SECTION 2"
+      },
+      "event": {
+        "id": "900000000002",
+        "name": "SAMPLE SPRING SWISS",
+        "startDate": "2026-04-11",
+        "endDate": "2026-04-11",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "R",
+      "player": {
+        "color": "White",
+        "outcome": "Win"
+      },
+      "opponent": {
+        "id": "90000020",
+        "firstName": "NORA",
+        "lastName": "HALE",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Loss"
+      }
+    },
+    {
+      "section": {
+        "id": "01SYNTHETIC00031",
+        "number": 1,
+        "name": "SECTION 1"
+      },
+      "event": {
+        "id": "900000000003",
+        "name": "SAMPLE QUICK QUADS",
+        "startDate": "2026-03-01",
+        "endDate": "2026-03-01",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "Q",
+      "player": {
+        "color": "White",
+        "outcome": "Win"
+      },
+      "opponent": {
+        "id": "90000021",
+        "firstName": "ELI",
+        "lastName": "MARSH",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Loss"
+      }
+    },
+    {
+      "section": {
+        "id": "01SYNTHETIC00041",
+        "number": 1,
+        "name": "SECTION 1"
+      },
+      "event": {
+        "id": "900000000004",
+        "name": "SAMPLE ONLINE ARENA",
+        "startDate": "2026-02-01",
+        "endDate": "2026-02-01",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "OR",
+      "player": {
+        "color": "White",
+        "outcome": "Win"
+      },
+      "opponent": {
+        "id": "90000022",
+        "firstName": "JUNE",
+        "lastName": "PARK",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Loss"
+      }
+    },
+    {
+      "section": {
+        "id": "01SYNTHETIC00022",
+        "number": 2,
+        "name": "SECTION 2"
+      },
+      "event": {
+        "id": "900000000002",
+        "name": "SAMPLE SPRING SWISS",
+        "startDate": "2026-04-11",
+        "endDate": "2026-04-11",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "R",
+      "player": {
+        "color": "White",
+        "outcome": "Loss"
+      },
+      "opponent": {
+        "id": "90000023",
+        "firstName": "RAY",
+        "lastName": "STONE",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Win"
+      }
+    },
+    {
+      "section": {
+        "id": "01SYNTHETIC00022",
+        "number": 2,
+        "name": "SECTION 2"
+      },
+      "event": {
+        "id": "900000000002",
+        "name": "SAMPLE SPRING SWISS",
+        "startDate": "2026-04-11",
+        "endDate": "2026-04-11",
+        "stateCode": "NJ"
+      },
+      "ratingSystem": "R",
+      "player": {
+        "color": "White",
+        "outcome": "Draw"
+      },
+      "opponent": {
+        "id": "90000024",
+        "firstName": "IDA",
+        "lastName": "WELLS",
+        "stateRep": "NJ",
+        "color": "Black",
+        "outcome": "Draw"
+      }
+    }
+  ],
+  "offset": 0,
+  "pageSize": 100,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}

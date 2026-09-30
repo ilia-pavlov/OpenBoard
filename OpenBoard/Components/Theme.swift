@@ -91,4 +91,22 @@ extension View {
                     .strokeBorder(Color.obHairline, lineWidth: 1)
             )
     }
+
+    /// Gold outline on the row the user last opened, so it's easy to find again
+    /// after coming back. Same look as the crosstable's highlighted player.
+    func lastOpened(_ isLastOpened: Bool, cornerRadius: CGFloat = 20) -> some View {
+        overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(Color.obGold.opacity(0.9), lineWidth: 2)
+                .opacity(isLastOpened ? 1 : 0)
+        }
+        .animation(.snappy, value: isLastOpened)
+        .accessibilityAddTraits(isLastOpened ? .isSelected : [])
+    }
+
+    /// Runs `action` when a navigation row is tapped, without taking the tap
+    /// from the link itself.
+    func onOpen(_ action: @escaping () -> Void) -> some View {
+        simultaneousGesture(TapGesture().onEnded(action))
+    }
 }

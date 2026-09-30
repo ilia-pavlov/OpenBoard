@@ -9,6 +9,8 @@ struct PlayerProfileView: View {
     @State private var state: Loadable<Player> = .idle
     @State private var segment: Segment = .ratings
     @State private var isWatching = false
+    /// The event row opened last, outlined when the user comes back.
+    @State private var lastOpenedEventID: String?
 
     enum Segment: String, CaseIterable {
         case ratings = "Ratings"
@@ -166,6 +168,8 @@ struct PlayerProfileView: View {
                 }
             }
         }
+
+        BestWinsCard(memberID: player.id)
     }
 
     private func dualFootnote(_ rating: Rating?) -> String? {
@@ -194,8 +198,10 @@ struct PlayerProfileView: View {
             ForEach(player.events) { event in
                 NavigationLink(value: Destination.event(id: event.id, highlight: player.id)) {
                     EventResultRow(event: event)
+                        .lastOpened(lastOpenedEventID == event.id)
                 }
                 .buttonStyle(.plain)
+                .onOpen { lastOpenedEventID = event.id }
                 .accessibilityIdentifier(AccessibilityID.historyEvent(event.id))
             }
         }

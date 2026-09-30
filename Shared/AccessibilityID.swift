@@ -35,6 +35,10 @@ enum AccessibilityID {
 
     static let heroRatingCard = "hero-rating-card"
     static let profileRatingCard = "profile-rating-card"
+    static let bestWins = "best-wins"
+    static let bestWinsInfo = "best-wins-info"
+    /// One row of Best wins, keyed by the opponent's member ID.
+    static func bestWin(_ opponentID: String) -> String { "best-win-\(opponentID)" }
     static let watchToggle = "watch-toggle"
     static func historyEvent(_ eventID: String) -> String { "history-event-\(eventID)" }
 
