@@ -32,7 +32,9 @@ struct SearchView: View {
         .accessibilityIdentifier(AccessibilityID.Screen.search)
         .background(Color.obBackground)
         .navigationTitle("Search")
-        .searchable(text: $query, prompt: "Name, member ID, or event ID")
+        .searchable(text: $query,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Name, member ID, or event ID")
         .searchScopes($scope, activation: .onSearchPresentation) {
             ForEach(SearchScope.allCases, id: \.self) { s in
                 Text(s.rawValue).tag(s)
@@ -69,6 +71,31 @@ struct SearchView: View {
                 .padding(.vertical, 4)
             }
             .accessibilityIdentifier(AccessibilityID.browseTop100)
+
+            Link(destination: .usChessJoin) {
+                HStack(spacing: 14) {
+                    Image(systemName: "person.badge.plus")
+                        .font(.title2)
+                        .foregroundStyle(Color.obGold)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Join or renew US Chess")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("Membership is required to play rated events and get an official rating")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "arrow.up.forward")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 4)
+            }
+            .tint(.primary)
+            .accessibilityLabel("Join or renew US Chess membership. Opens the US Chess website.")
+            .accessibilityIdentifier(AccessibilityID.browseJoinUSChess)
         }
     }
 

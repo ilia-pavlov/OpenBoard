@@ -97,11 +97,8 @@ struct EventsView: View {
 
     // MARK: - Join US Chess (no rating yet)
 
-    /// Official US Chess membership sign-up (verified live 2026-08-08).
-    private static let joinURL = URL(string: "https://www.uschess.org/join")!
-
     private var joinCard: some View {
-        Link(destination: Self.joinURL) {
+        Link(destination: .usChessJoin) {
             HStack(spacing: 14) {
                 Image(systemName: "person.badge.plus")
                     .font(.title2)
@@ -169,4 +166,9 @@ struct EventsView: View {
                             cached: cached?.0, cachedAt: cached?.1)
         }
     }
+}
+
+extension URL {
+    /// Official US Chess membership sign-up (verified live 2026-08-08).
+    static let usChessJoin = URL(string: "https://www.uschess.org/join")!
 }
