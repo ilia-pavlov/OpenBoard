@@ -76,7 +76,7 @@ struct MajorEvent: Identifiable, Codable, Sendable, Hashable {
 // MARK: - Search filters
 
 enum SearchRadius: Int, CaseIterable, Identifiable, Codable, Sendable {
-    case mi25 = 25, mi50 = 50, mi100 = 100, mi200 = 200
+    case mi10 = 10, mi25 = 25, mi50 = 50, mi100 = 100, mi200 = 200, mi300 = 300, mi500 = 500
     var id: Int { rawValue }
     var title: String { "\(rawValue) mi" }
 }
