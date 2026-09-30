@@ -28,14 +28,17 @@ struct BestWinsCard: View {
                     .padding(.top, 8)
                     VStack(spacing: 0) {
                         ForEach(Array((progress?.wins ?? []).enumerated()), id: \.element.id) { index, win in
+                            let topRank = model.topLists.best(for: win.opponentID)
                             if index > 0 {
                                 Divider().padding(.leading, 16)
                             }
                             NavigationLink(value: Destination.event(id: win.eventID, highlight: memberID)) {
-                                BestWinRow(win: win, featured: index == 0)
+                                BestWinRow(win: win,
+                                           topRank: topRank,
+                                           featured: index == 0)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel(BestWinRow.accessibilityText(win))
+                            .accessibilityLabel(BestWinRow.accessibilityText(win, topRank: topRank))
                             .accessibilityIdentifier(AccessibilityID.bestWin(win.opponentID))
                         }
                         if progress?.isFinished != true {
@@ -137,6 +140,8 @@ private struct BestWinsInfo: View {
                   systemImage: "calendar")
             Label("\"+150 above\" means the opponent was rated 150 points higher at the time.",
                   systemImage: "arrow.up.right")
+            Label("A medal means the opponent is on a US Chess Top 100 list today.",
+                  systemImage: "medal")
             Label("Tap a win to see that tournament.", systemImage: "hand.tap")
             Text("The first check can take a few minutes for players with lots of games. After that it's instant.")
                 .font(.caption)
@@ -151,6 +156,8 @@ private struct BestWinsInfo: View {
 
 private struct BestWinRow: View {
     let win: NotableWin
+    /// The opponent's best spot on today's Top 100 lists, if any.
+    let topRank: TopListRank?
     let featured: Bool
 
     var body: some View {
@@ -166,6 +173,9 @@ private struct BestWinRow: View {
                     .font(featured ? .headline : .subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                if let topRank {
+                    TopRankBadge(rank: topRank)
+                }
                 Text([win.eventName, Format.eventDate(win.date)].filter { !$0.isEmpty }.joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -193,9 +203,10 @@ private struct BestWinRow: View {
     }
 
     /// Read by VoiceOver on the row's link, in place of the row's separate texts.
-    static func accessibilityText(_ win: NotableWin) -> String {
+    static func accessibilityText(_ win: NotableWin, topRank: TopListRank?) -> String {
         var text = "Beat \(win.opponentName), rated \(win.opponentRating), at \(win.eventName)"
         if let gap = win.ratingGap, gap > 0 { text += ", \(gap) points above" }
+        if let topRank { text += ". Now number \(topRank.rank) on the Top 100, \(topRank.definition.badgeLabel)" }
         return text
     }
 }

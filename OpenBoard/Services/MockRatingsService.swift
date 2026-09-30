@@ -50,7 +50,7 @@ struct MockRatingsService: RatingsProviding {
 
     /// Sample players placed on lists so badges show up in demo mode.
     private static let topListPlacements: [String: [(rank: Int, id: String, name: String, state: String?)]] = [
-        "Regular9": [(37, samplePlayerID, "Alex Rivera", "NJ")],
+        "Regular9": [(37, samplePlayerID, "Alex Rivera", "NJ"), (81, "90000013", "Owen Price", "NJ")],
         "Regular8": [(48, "90000010", "Ava Sterling", nil)],
         "WomensRegular8": [(12, "90000010", "Ava Sterling", nil)],
         "WomensRegular9": [(64, "90000011", "Maya Brooks", nil)],
