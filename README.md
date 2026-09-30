@@ -496,20 +496,21 @@ All green on the iOS 26.5 simulator.
 ### API contract monitor — twice a day
 
 The US Chess services aren't a supported public API, so they can change without
-notice. `OpenBoardTests/LiveAPITests` holds **contract tests**: 7 live checks that
-call every endpoint the app uses, through the app's own services and parsers
-(player profile, search, crosstable, Top 100, Best wins games, upcoming
-tournaments + announcement, Plan Ahead Calendar). They're skipped in normal runs.
+notice. Every endpoint, query parameter and HTML parser pattern the app uses is
+written in **one file**, `Shared/USChessEndpoints.swift`. The app builds its URLs
+and parses its pages from it, and `scripts/api_contract_check.py` **reads the same
+file** to call each endpoint and compare the response's shape (fields and types,
+not values) with the snapshot in `scripts/api_contract.json`. An endpoint added to
+the Swift file without a check fails the monitor.
 
-The **API monitor** workflow (`.github/workflows/api-monitor.yml`) runs them at
-07:00 and 19:00 US Eastern (and on demand from the Actions tab). A failure opens a
-GitHub issue labelled `api-monitor`; the next passing run closes it. To run them
-locally:
+The **API monitor** workflow (`.github/workflows/api-monitor.yml`) runs it at
+07:00 and 19:00 US Eastern on a Linux runner (no app build, about a minute), and
+on demand from the Actions tab. A failure opens a GitHub issue labelled
+`api-monitor`; the next passing run closes it.
 
 ```bash
-TEST_RUNNER_LIVE_API=1 xcodebuild test -project OpenBoard.xcodeproj -scheme OpenBoard \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
-  -only-testing:OpenBoardTests/LiveAPITests
+python3 scripts/api_contract_check.py            # check (standard library only)
+python3 scripts/api_contract_check.py --record   # accept today's response shapes
 ```
 
 ## Definition of done — status

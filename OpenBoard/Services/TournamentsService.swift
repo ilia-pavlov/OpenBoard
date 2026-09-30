@@ -15,14 +15,14 @@ protocol TournamentsProviding: Sendable {
 }
 
 struct LiveTournamentsService: TournamentsProviding {
-    static let site = URL(string: "https://new.uschess.org")!
+    static let site = URL(string: USChess.Site.base)!
     /// The search returns 30 per page; cap how many pages one search pulls.
     static let maxPages = 6
 
     func upcoming(near origin: String, radius: SearchRadius) async throws -> [TournamentListing] {
         let query = [
-            URLQueryItem(name: "field_geofield_proximity[value]", value: String(radius.rawValue)),
-            URLQueryItem(name: "field_geofield_proximity[source_configuration][origin_address]", value: origin),
+            URLQueryItem(name: USChess.Params.radius, value: String(radius.rawValue)),
+            URLQueryItem(name: USChess.Params.origin, value: origin),
         ]
         let first = try await page(query, page: 0)
         let lastPage = min(TournamentParser.lastPageIndex(in: first), Self.maxPages - 1)
@@ -40,31 +40,31 @@ struct LiveTournamentsService: TournamentsProviding {
     }
 
     func detail(id: String) async throws -> TournamentDetail {
-        guard var components = URLComponents(url: Self.site.appending(path: id), resolvingAgainstBaseURL: false)
+        guard var components = URLComponents(url: Self.site.appending(path: USChess.fill(USChess.Site.announcement, ["path": id])), resolvingAgainstBaseURL: false)
         else { throw RatingsError.badURL }
-        components.queryItems = [URLQueryItem(name: "_format", value: "json")]
+        components.queryItems = [URLQueryItem(name: USChess.Params.format, value: "json")]
         guard let url = components.url else { throw RatingsError.badURL }
         let data = try await fetch(url)
         return try TournamentParser.detail(id: id, json: data)
     }
 
     func majorEvents() async throws -> [MajorEvent] {
-        let html = try await text(Self.site.appending(path: "plan-ahead-calendar"))
+        let html = try await text(Self.site.appending(path: USChess.Site.planAheadCalendar))
         return TournamentParser.majorEvents(from: html)
     }
 
     func findAnnouncement(for event: MajorEvent) async throws -> TournamentListing? {
-        let html = try await page([URLQueryItem(name: "combine", value: event.searchName)], page: 0)
+        let html = try await page([URLQueryItem(name: USChess.Params.keyword, value: event.searchName)], page: 0)
         return TournamentParser.bestMatch(for: event, in: TournamentParser.listings(from: html))
     }
 
     // MARK: - HTTP
 
     private func page(_ query: [URLQueryItem], page: Int) async throws -> String {
-        guard var components = URLComponents(url: Self.site.appending(path: "upcoming-tournaments"),
+        guard var components = URLComponents(url: Self.site.appending(path: USChess.Site.upcomingSearch),
                                              resolvingAgainstBaseURL: false)
         else { throw RatingsError.badURL }
-        components.queryItems = query + (page > 0 ? [URLQueryItem(name: "page", value: String(page))] : [])
+        components.queryItems = query + (page > 0 ? [URLQueryItem(name: USChess.Params.page, value: String(page))] : [])
         guard let url = components.url else { throw RatingsError.badURL }
         return try await text(url)
     }
@@ -96,10 +96,10 @@ enum TournamentParser {
     // MARK: Search results page
 
     static func listings(from html: String) -> [TournamentListing] {
-        html.components(separatedBy: #"<div class="views-row">"#).dropFirst().compactMap { row in
-            guard let path = capture(#"<h3 class="title3"><a href="([^"]+)""#, in: row),
-                  let name = capture(#"<h3 class="title3"><a [^>]*>(.*?)</a>"#, in: row) else { return nil }
-            let times = captures(#"<time datetime="(\d{4}-\d{2}-\d{2})"#, in: row)
+        html.components(separatedBy: USChess.Patterns.listingRow).dropFirst().compactMap { row in
+            guard let path = capture(USChess.Patterns.listingPath, in: row),
+                  let name = capture(USChess.Patterns.listingName, in: row) else { return nil }
+            let times = captures(USChess.Patterns.listingDate, in: row)
             let isRange = row.contains("date-recur-occurrences")
             let start = times.first.flatMap(day)
             let end = times.count > 1 ? day(times[times.count - 1]) : start
@@ -109,11 +109,11 @@ enum TournamentParser {
                 id: path,
                 name: clean(name),
                 // Organizers type stray commas/spaces: "Princeton, , New Jersey", "Millburn , New Jersey".
-                location: clean(capture(#"<div class="address">(.*?)</div>"#, in: row) ?? "")
+                location: clean(capture(USChess.Patterns.listingAddress, in: row) ?? "")
                     .replacingOccurrences(of: #"\s*,(\s*,)*\s*"#, with: ", ", options: .regularExpression),
-                organizer: clean(capture(#"<div class="organizer-name">(.*?)</div>"#, in: row) ?? ""),
-                summary: clean(capture(#"<div class="information">(.*?)</div>"#, in: row) ?? ""),
-                banner: clean(capture(#"<div class="banner-line h4">(.*?)</div>"#, in: row) ?? ""),
+                organizer: clean(capture(USChess.Patterns.listingOrganizer, in: row) ?? ""),
+                summary: clean(capture(USChess.Patterns.listingSummary, in: row) ?? ""),
+                banner: clean(capture(USChess.Patterns.listingBanner, in: row) ?? ""),
                 startDate: start,
                 endDate: end,
                 isRecurring: isRecurring
@@ -123,7 +123,7 @@ enum TournamentParser {
 
     /// Highest `page=N` in the pager (0 when there's a single page).
     static func lastPageIndex(in html: String) -> Int {
-        captures(#"[?&amp;]page=(\d+)"#, in: html).compactMap(Int.init).max() ?? 0
+        captures(USChess.Patterns.pagerPage, in: html).compactMap(Int.init).max() ?? 0
     }
 
     /// Dated events soonest first, then recurring series; duplicates across pages removed.
@@ -322,7 +322,7 @@ enum TournamentParser {
         var events: [MajorEvent] = []
         var year: Int?
         // Walk year headings and entries in document order.
-        let tokens = captureGroups(#"<h2[^>]*>(.*?)</h2>|<p[^>]*>\s*<strong>([^<]*\d[^<]*):?\s*</strong>(.*?)</p>"#, in: html)
+        let tokens = captureGroups(USChess.Patterns.planAheadEntry, in: html)
         for token in tokens {
             if !token[0].isEmpty {
                 year = Int(clean(token[0]).prefix(4)) ?? year
