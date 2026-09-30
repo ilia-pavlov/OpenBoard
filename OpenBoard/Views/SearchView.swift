@@ -108,17 +108,43 @@ struct SearchView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             } else {
-                ForEach(recents.prefix(8)) { recent in
+                let shown = Array(recents.prefix(8))
+                ForEach(shown) { recent in
                     Button {
                         query = recent.query
                     } label: {
                         Label(recent.query, systemImage: "clock.arrow.circlepath")
                             .foregroundStyle(.primary)
                     }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            withAnimation { model.forgetSearch(recent) }
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
+                    .accessibilityIdentifier(AccessibilityID.recentSearch(recent.query))
+                }
+                .onDelete { offsets in
+                    withAnimation {
+                        for index in offsets { model.forgetSearch(shown[index]) }
+                    }
                 }
             }
         } header: {
-            if !recents.isEmpty { Text("Recent") }
+            if !recents.isEmpty {
+                HStack {
+                    Text("Recent")
+                    Spacer()
+                    Button("Clear") {
+                        withAnimation { model.clearSearches() }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.obGold)
+                    .textCase(nil)
+                    .accessibilityIdentifier(AccessibilityID.clearRecentSearches)
+                }
+            }
         }
     }
 

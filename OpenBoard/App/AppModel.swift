@@ -196,6 +196,25 @@ final class AppModel {
         try? context.save()
     }
 
+    /// Saves a new order for watched players (drag and drop in Watching):
+    /// `sortOrder` follows the array.
+    func reorderWatched(_ ordered: [WatchedPlayer]) {
+        for (index, row) in ordered.enumerated() where row.sortOrder != index {
+            row.sortOrder = index
+        }
+        try? container.mainContext.save()
+    }
+
+    func forgetSearch(_ search: RecentSearch) {
+        container.mainContext.delete(search)
+        try? container.mainContext.save()
+    }
+
+    func clearSearches() {
+        try? container.mainContext.delete(model: RecentSearch.self)
+        try? container.mainContext.save()
+    }
+
     func rememberSearch(_ query: String) {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count > 1 else { return }

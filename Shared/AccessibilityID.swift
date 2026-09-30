@@ -79,4 +79,7 @@ enum AccessibilityID {
     // MARK: Watching
 
     static func watchRow(_ memberID: String) -> String { "watch-row-\(memberID)" }
+    static let watchlistEdit = "watchlist-edit"
+    static func recentSearch(_ query: String) -> String { "recent-search-\(query)" }
+    static let clearRecentSearches = "clear-recent-searches"
 }

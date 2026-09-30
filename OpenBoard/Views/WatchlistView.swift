@@ -8,19 +8,37 @@ struct WatchlistView: View {
     // Soonest first; undated (recurring series) last.
     @Query(sort: \SavedTournament.startDate) private var savedTournaments: [SavedTournament]
     @State private var isChecking = false
+    @State private var editMode: EditMode = .inactive
 
     private var primary: [WatchedPlayer] { watched.filter(\.isPrimary) }
     private var rivals: [WatchedPlayer] { watched.filter { !$0.isPrimary } }
 
     var body: some View {
         VStack(spacing: 0) {
-            ScreenTitle("Watching") { refreshButton }
+            ScreenTitle("Watching") {
+                HStack(spacing: 18) {
+                    if watched.count > 1 { editButton }
+                    refreshButton
+                }
+            }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             list
         }
         .background(Color.obBackground)
         .toolbar(.hidden, for: .navigationBar)
+        .environment(\.editMode, $editMode)
+    }
+
+    /// Edit shows drag handles for reordering players (a long press and drag
+    /// works too, outside Edit).
+    private var editButton: some View {
+        Button(editMode.isEditing ? "Done" : "Edit") {
+            withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+        }
+        .font(.body.weight(editMode.isEditing ? .semibold : .regular))
+        .foregroundStyle(Color.obGold)
+        .accessibilityIdentifier(AccessibilityID.watchlistEdit)
     }
 
     private var refreshButton: some View {
@@ -75,6 +93,12 @@ struct WatchlistView: View {
                         watchRow(row, tint: .obTeal)
                     }
                     .onDelete { unfollow(from: rivals, at: $0) }
+                    .onMove { source, destination in
+                        var reordered = rivals
+                        reordered.move(fromOffsets: source, toOffset: destination)
+                        // My players stay first; rivals follow in the new order.
+                        model.reorderWatched(primary + reordered)
+                    }
                 }
             }
         }
@@ -139,13 +163,20 @@ struct WatchlistView: View {
                                 .foregroundStyle(Color.obGold)
                         }
                     }
-                    HStack(spacing: 6) {
-                        Text(Format.daysAgo(row.lastRatedDate))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        PlayerTopBadge(memberID: row.memberID)
+                    // Side by side when they fit; stacked when the row is narrow
+                    // (Edit mode's handles, large text) instead of squeezing the date.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 6) {
+                            lastRated(row)
+                            PlayerTopBadge(memberID: row.memberID)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            lastRated(row)
+                            PlayerTopBadge(memberID: row.memberID)
+                        }
                     }
                 }
+                .layoutPriority(1) // the name wins space over the rating digits
                 Spacer()
                 ClockDigits(value: row.lastKnownRegular,
                             tint: row.isPrimary ? .obGold : .obTeal,
@@ -168,6 +199,14 @@ struct WatchlistView: View {
             }
         }
         .accessibilityIdentifier(AccessibilityID.watchRow(row.memberID))
+    }
+
+    private func lastRated(_ row: WatchedPlayer) -> some View {
+        Text(Format.daysAgo(row.lastRatedDate))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     private func unfollow(from rows: [WatchedPlayer], at offsets: IndexSet) {
