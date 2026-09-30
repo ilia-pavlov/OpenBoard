@@ -14,6 +14,10 @@ struct BestWinsCard: View {
     @State private var progress: BestWinsProgress?
     @State private var stopped = false
     @State private var showsInfo = false
+    /// Whose wins `progress` holds; `.task` re-runs on every return to the screen.
+    @State private var scannedMemberID: String?
+    /// The win opened last, tinted when the user comes back.
+    @State private var lastOpenedWinID: String?
 
     var body: some View {
         Group {
@@ -36,8 +40,12 @@ struct BestWinsCard: View {
                                 BestWinRow(win: win,
                                            topRank: topRank,
                                            featured: index == 0)
+                                    .background(Color.obGold.opacity(lastOpenedWinID == win.id ? 0.12 : 0))
+                                    .animation(.snappy, value: lastOpenedWinID)
+                                    .accessibilityAddTraits(lastOpenedWinID == win.id ? .isSelected : [])
                             }
                             .buttonStyle(.plain)
+                            .onOpen { lastOpenedWinID = win.id }
                             .accessibilityLabel(BestWinRow.accessibilityText(win, topRank: topRank))
                             .accessibilityIdentifier(AccessibilityID.bestWin(win.opponentID))
                         }
@@ -115,11 +123,27 @@ struct BestWinsCard: View {
     }
 
     private func scan() async {
-        progress = nil
+        // Back from a crosstable: the finished card stays exactly as it was, so
+        // the screen keeps its scroll position.
+        if scannedMemberID == memberID, progress?.isFinished == true { return }
+        if scannedMemberID != memberID {
+            progress = nil
+            lastOpenedWinID = nil
+        }
+        scannedMemberID = memberID
         stopped = false
         do {
             for try await step in model.service.bestWinsScan(memberID: memberID) {
-                progress = step
+                // Resuming a scan left midway: its cached sections replay in a
+                // moment; keep the wins on screen until it catches up, so the
+                // card never shrinks and shifts the rows below.
+                if let shown = progress?.wins, step.wins.count < shown.count, !step.isFinished {
+                    progress?.gameCount = step.gameCount
+                    progress?.eventsChecked = step.eventsChecked
+                    progress?.eventsTotal = step.eventsTotal
+                } else {
+                    progress = step
+                }
             }
         } catch is CancellationError {
             // Left the screen; cached sections let the next visit pick up from here.

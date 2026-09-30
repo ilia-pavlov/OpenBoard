@@ -9,6 +9,8 @@ struct MyCardView: View {
     @Query(filter: #Predicate<WatchedPlayer> { $0.isPrimary },
            sort: \WatchedPlayer.sortOrder) private var primaries: [WatchedPlayer]
     @State private var state: Loadable<Player> = .idle
+    /// The event row opened last, outlined when the user comes back.
+    @State private var lastOpenedEventID: String?
     @State private var refreshPulse = 0
 
     private var primaryMemberID: String? { primaries.first?.memberID }
@@ -117,8 +119,10 @@ struct MyCardView: View {
             ForEach(player.events.prefix(6)) { event in
                 NavigationLink(value: Destination.event(id: event.id, highlight: player.id)) {
                     EventResultRow(event: event)
+                        .lastOpened(lastOpenedEventID == event.id)
                 }
                 .buttonStyle(.plain)
+                .onOpen { lastOpenedEventID = event.id }
             }
         }
     }

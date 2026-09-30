@@ -16,6 +16,8 @@ struct EventsView: View {
     @State private var eventIDInput = ""
     @State private var state: Loadable<Player> = .idle
     @State private var mode: Mode = .upcoming
+    /// The event row opened last, outlined when the user comes back.
+    @State private var lastOpenedEventID: String?
 
     private var primaryMemberID: String? { primaries.first?.memberID }
 
@@ -143,8 +145,10 @@ struct EventsView: View {
             ForEach(player.events) { event in
                 NavigationLink(value: Destination.event(id: event.id, highlight: player.id)) {
                     EventResultRow(event: event)
+                        .lastOpened(lastOpenedEventID == event.id)
                 }
                 .buttonStyle(.plain)
+                .onOpen { lastOpenedEventID = event.id }
             }
         }
     }
