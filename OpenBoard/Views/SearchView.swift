@@ -32,7 +32,9 @@ struct SearchView: View {
         .accessibilityIdentifier(AccessibilityID.Screen.search)
         .background(Color.obBackground)
         .navigationTitle("Search")
-        .searchable(text: $query, prompt: "Name, member ID, or event ID")
+        .searchable(text: $query,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Name, member ID, or event ID")
         .searchScopes($scope, activation: .onSearchPresentation) {
             ForEach(SearchScope.allCases, id: \.self) { s in
                 Text(s.rawValue).tag(s)
