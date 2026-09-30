@@ -39,6 +39,9 @@ enum AccessibilityID {
     static let bestWinsInfo = "best-wins-info"
     static let bestWinsInfoPopover = "best-wins-info-popover"
     static let bestWinsPause = "best-wins-pause"
+    /// The two choices after tapping a best win.
+    static let bestWinProfile = "best-win-profile"
+    static let bestWinTournament = "best-win-tournament"
     /// A row of My Card's Recent events.
     static func recentEvent(_ eventID: String) -> String { "recent-event-\(eventID)" }
     /// One row of Best wins, keyed by the opponent's member ID.

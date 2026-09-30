@@ -22,22 +22,32 @@ struct RootView: View {
 extension View {
     func openBoardDestinations() -> some View {
         navigationDestination(for: Destination.self) { destination in
-            switch destination {
-            case .player(let id):
-                PlayerProfileView(memberID: id)
-            case .event(let id, let highlight):
-                CrosstableView(eventID: id, highlightMemberID: highlight)
-            case .ratingHistory(let player, let system):
-                RatingHistoryView(player: player, initialSystem: system)
-            case .upcomingTournament(let id):
-                TournamentDetailView(id: id)
-            case .majorEvent(let event):
-                MajorEventView(event: event)
-            case .topLists:
-                TopListsBrowseView()
-            case .topList(let id, let highlight):
-                TopListView(id: id, highlight: highlight)
-            }
+            DestinationView(destination: destination)
+        }
+    }
+}
+
+/// The screen for a destination. Shared by value-based links and by views that
+/// push programmatically (a menu item can't hold a NavigationLink).
+struct DestinationView: View {
+    let destination: Destination
+
+    var body: some View {
+        switch destination {
+        case .player(let id):
+            PlayerProfileView(memberID: id)
+        case .event(let id, let highlight):
+            CrosstableView(eventID: id, highlightMemberID: highlight)
+        case .ratingHistory(let player, let system):
+            RatingHistoryView(player: player, initialSystem: system)
+        case .upcomingTournament(let id):
+            TournamentDetailView(id: id)
+        case .majorEvent(let event):
+            MajorEventView(event: event)
+        case .topLists:
+            TopListsBrowseView()
+        case .topList(let id, let highlight):
+            TopListView(id: id, highlight: highlight)
         }
     }
 }

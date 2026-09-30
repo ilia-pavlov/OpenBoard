@@ -18,8 +18,8 @@ struct BestWinsCard: View {
     @State private var showsInfo = false
     /// Whose wins `progress` holds; `.task` re-runs on every return to the screen.
     @State private var scannedMemberID: String?
-    /// The win opened last, tinted when the user comes back.
-    @State private var lastOpenedWinID: String?
+    /// Where the chosen menu item goes (the opponent or the tournament).
+    @State private var opening: Destination?
 
     var body: some View {
         Group {
@@ -38,17 +38,31 @@ struct BestWinsCard: View {
                             if index > 0 {
                                 Divider().padding(.leading, 16)
                             }
-                            NavigationLink(value: Destination.event(id: win.eventID, highlight: memberID)) {
+                            // Tapping a win asks where to go: the opponent or the tournament.
+                            Menu {
+                                Button {
+                                    open(.player(id: win.opponentID), for: win)
+                                } label: {
+                                    Label("View \(firstName(win.opponentName))'s profile",
+                                          systemImage: "person.crop.circle")
+                                }
+                                .accessibilityIdentifier(AccessibilityID.bestWinProfile)
+                                Button {
+                                    open(.event(id: win.eventID, highlight: memberID), for: win)
+                                } label: {
+                                    Label("Open tournament", systemImage: "trophy")
+                                }
+                                .accessibilityIdentifier(AccessibilityID.bestWinTournament)
+                            } label: {
+                                // No "last opened" tint here: inside one card it read as
+                                // a row stuck highlighted (lists of cards get an outline).
                                 BestWinRow(win: win,
                                            topRank: topRank,
                                            featured: index == 0)
-                                    .background(Color.obGold.opacity(lastOpenedWinID == win.id ? 0.12 : 0))
-                                    .animation(.snappy, value: lastOpenedWinID)
-                                    .accessibilityAddTraits(lastOpenedWinID == win.id ? .isSelected : [])
                             }
                             .buttonStyle(.plain)
-                            .onOpen { lastOpenedWinID = win.id }
                             .accessibilityLabel(BestWinRow.accessibilityText(win, topRank: topRank))
+                            .accessibilityHint("Opens the opponent's profile or the tournament")
                             .accessibilityIdentifier(AccessibilityID.bestWin(win.opponentID))
                         }
                         if progress?.isFinished != true {
@@ -65,6 +79,9 @@ struct BestWinsCard: View {
                 .accessibilityIdentifier(AccessibilityID.bestWins)
             }
         }
+        .navigationDestination(item: $opening) { destination in
+            DestinationView(destination: destination)
+        }
         .task(id: ScanKey(memberID: memberID, paused: isPaused)) {
             if isPaused {
                 await showSaved()
@@ -72,6 +89,14 @@ struct BestWinsCard: View {
                 await scan()
             }
         }
+    }
+
+    private func open(_ destination: Destination, for win: NotableWin) {
+        opening = destination
+    }
+
+    private func firstName(_ name: String) -> String {
+        name.split(separator: " ").first.map(String.init) ?? name
     }
 
     private struct ScanKey: Equatable {
@@ -191,7 +216,6 @@ struct BestWinsCard: View {
         if scannedMemberID == memberID, progress?.isFinished == true { return }
         if scannedMemberID != memberID {
             progress = nil
-            lastOpenedWinID = nil
         }
         scannedMemberID = memberID
         stopped = false
@@ -230,7 +254,7 @@ private struct BestWinsInfo: View {
                   systemImage: "arrow.up.right")
             Label("A medal means the opponent is on a US Chess Top 100 list today.",
                   systemImage: "medal")
-            Label("Tap a win to see that tournament.", systemImage: "hand.tap")
+            Label("Tap a win to open the opponent's profile or that tournament.", systemImage: "hand.tap")
             Text("The first check can take a few minutes for players with lots of games. Pause stops it and Resume picks up where it left off; after that it's instant.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
