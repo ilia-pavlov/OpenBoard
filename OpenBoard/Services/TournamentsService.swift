@@ -229,6 +229,7 @@ enum TournamentParser {
         var open = (bold: false, italic: false)
         var linkURL: String?
         var linkStart: Int? // UTF-8 offset into `out` where the link text begins
+        var cellsInRow = 0
 
         // Markers open lazily at the next visible text and close before whitespace,
         // so "<strong>Prize&nbsp;</strong>" becomes "**Prize** " (valid emphasis).
@@ -265,7 +266,15 @@ enum TournamentParser {
             let closing = tag.hasPrefix("</")
             switch name {
             case "br": lineBreak("\n")
-            case "p", "div", "tr": if closing { lineBreak("\n") }
+            case "p", "div": if closing { lineBreak("\n") }
+            case "tr":
+                // Table rows (results in news articles) read as "1 · Name · 2750".
+                if closing { lineBreak("\n") } else { cellsInRow = 0 }
+            case "td", "th":
+                if !closing {
+                    if cellsInRow > 0 { text(" · ") }
+                    cellsInRow += 1
+                }
             case "h1", "h2", "h3", "h4", "h5", "h6":
                 if closing { bold -= 1; lineBreak("\n\n") } else { lineBreak(""); bold += 1 }
             case "strong", "b": bold += closing ? -1 : 1; if closing { closeMarkers() }

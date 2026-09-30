@@ -58,6 +58,13 @@ enum Format {
         }
     }
 
+    /// "3 hours ago" within a week, then "Sep 18, 2026".
+    static func newsDate(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        guard Date.now.timeIntervalSince(date) < 7 * 86_400 else { return eventDate(date) }
+        return date.formatted(.relative(presentation: .named))
+    }
+
     static func timeOfDay(_ date: Date) -> String {
         date.formatted(date: .omitted, time: .shortened)
     }

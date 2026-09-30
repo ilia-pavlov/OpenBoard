@@ -57,19 +57,7 @@ struct TournamentDetail: Codable, Sendable, Hashable {
     /// The announcement styled for display, with bare web addresses, emails and
     /// phone numbers made tappable alongside the organizer's own links.
     var formattedAnnouncement: AttributedString {
-        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        var text = (try? AttributedString(markdown: announcement, options: options))
-            ?? AttributedString(announcement)
-        let plain = String(text.characters)
-        let types: NSTextCheckingResult.CheckingType = [.link, .phoneNumber]
-        guard let detector = try? NSDataDetector(types: types.rawValue) else { return text }
-        for match in detector.matches(in: plain, range: NSRange(plain.startIndex..., in: plain)) {
-            let url = match.url ?? match.phoneNumber.flatMap { URL(string: "tel:" + $0.filter(\.isNumber)) }
-            guard let url, let range = Range(match.range, in: text),
-                  text[range].runs.allSatisfy({ $0.link == nil }) else { continue }
-            text[range].link = url
-        }
-        return text
+        RichText.attributed(announcement)
     }
 
     /// Plain text for the clipboard: named links keep their address in

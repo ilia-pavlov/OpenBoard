@@ -37,6 +37,8 @@ extension View {
                 TopListsBrowseView()
             case .topList(let id, let highlight):
                 TopListView(id: id, highlight: highlight)
+            case .newsArticle(let article):
+                NewsArticleView(article: article)
             }
         }
     }
@@ -49,6 +51,7 @@ struct TabRootView: View {
     @State private var myCardPath: [Destination] = []
     @State private var searchPath: [Destination] = []
     @State private var eventsPath: [Destination] = []
+    @State private var newsPath: [Destination] = []
     @State private var watchingPath: [Destination] = []
 
     var body: some View {
@@ -69,6 +72,11 @@ struct TabRootView: View {
                     EventsView().openBoardDestinations()
                 }
             }
+            Tab(AppTab.news.title, systemImage: AppTab.news.systemImage, value: AppTab.news) {
+                NavigationStack(path: $newsPath) {
+                    NewsView().openBoardDestinations()
+                }
+            }
             Tab(AppTab.watching.title, systemImage: AppTab.watching.systemImage, value: AppTab.watching) {
                 NavigationStack(path: $watchingPath) {
                     WatchlistView().openBoardDestinations()
@@ -86,6 +94,8 @@ struct TabRootView: View {
             model.selectedTab = .search
         case "events":
             model.selectedTab = .events
+        case "news":
+            model.selectedTab = .news
         case "watchlist":
             model.selectedTab = .watching
         case "profile":
@@ -155,6 +165,7 @@ struct SplitRootView: View {
         case .tab(.myCard), nil: MyCardView()
         case .tab(.search): SearchView()
         case .tab(.events): EventsView()
+        case .tab(.news): NewsView()
         case .tab(.watching): WatchlistView()
         case .watched(let id): PlayerProfileView(memberID: id)
         }
@@ -165,6 +176,7 @@ struct SplitRootView: View {
         switch screen {
         case "search": selection = .tab(.search)
         case "events": selection = .tab(.events)
+        case "news": selection = .tab(.news)
         case "watchlist": selection = .tab(.watching)
         case "profile": selection = .watched(MockRatingsService.samplePlayerID)
         case "history":

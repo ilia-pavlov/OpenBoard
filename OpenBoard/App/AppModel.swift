@@ -11,10 +11,11 @@ enum Destination: Hashable {
     case majorEvent(MajorEvent)
     case topLists
     case topList(id: String, highlight: String?)
+    case newsArticle(NewsArticle)
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case myCard, search, events, watching
+    case myCard, search, events, news, watching
     var id: String { rawValue }
 
     var title: String {
@@ -22,6 +23,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .myCard: String(localized: "My Card")
         case .search: String(localized: "Search")
         case .events: String(localized: "Events")
+        case .news: String(localized: "News")
         case .watching: String(localized: "Watching")
         }
     }
@@ -31,6 +33,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .myCard: "crown"
         case .search: "magnifyingglass"
         case .events: "trophy"
+        case .news: "newspaper"
         case .watching: "heart"
         }
     }
@@ -43,6 +46,7 @@ final class AppModel {
     let service: CachedRatingsService
     let tournaments: any TournamentsProviding
     let location: LocationProvider
+    let news: CachedNewsService
     let topLists = TopListsIndex()
 
     var selectedTab: AppTab = .myCard
@@ -61,6 +65,8 @@ final class AppModel {
         service = CachedRatingsService(upstream: upstream, container: container)
         tournaments = mock ? MockTournamentsService() : LiveTournamentsService()
         location = LocationProvider(mock: mock)
+        news = CachedNewsService(upstream: mock ? MockNewsService() : LiveNewsService(),
+                                 cache: service.cache)
 
         // No pre-seeded watchlist: the app launches empty. The user searches for
         // their own player (the first one watched becomes primary / "My Card")

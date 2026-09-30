@@ -62,6 +62,11 @@ finding the next tournament to play — fast and delightful:
 - **👤 Player profiles** — Regular / Quick / Blitz, **live vs published** ratings side
   by side, USCF class title, rankings, full event history, and a tap-to-copy
   member ID.
+- **📰 News** — the latest US Chess articles, with topic filters (scholastic,
+  national events, top Americans, women, annotated games, Tactics Tuesday, kids,
+  podcast, international). Each article opens with its photos and full text, links
+  intact, plus Share and *Read on US Chess*. Read from the site's RSS feeds; cached
+  for offline reading.
 - **❤️ Watching** — follow your kid, rivals, and teammates; get a local notification
   when a followed player's rating changes.
 
