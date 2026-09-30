@@ -13,6 +13,7 @@ struct BestWinsCard: View {
     @Environment(AppModel.self) private var model
     @State private var progress: BestWinsProgress?
     @State private var stopped = false
+    @State private var showsInfo = false
 
     var body: some View {
         Group {
@@ -20,8 +21,11 @@ struct BestWinsCard: View {
                 EmptyView()
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    SectionLabel(text: "Best wins")
-                        .padding(.top, 8)
+                    HStack {
+                        SectionLabel(text: "Best wins")
+                        infoButton
+                    }
+                    .padding(.top, 8)
                     VStack(spacing: 0) {
                         ForEach(Array((progress?.wins ?? []).enumerated()), id: \.element.id) { index, win in
                             if index > 0 {
@@ -49,6 +53,24 @@ struct BestWinsCard: View {
             }
         }
         .task(id: memberID) { await scan() }
+    }
+
+    private var infoButton: some View {
+        Button {
+            showsInfo = true
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("About best wins")
+        .accessibilityIdentifier(AccessibilityID.bestWinsInfo)
+        .popover(isPresented: $showsInfo) {
+            BestWinsInfo()
+                .presentationCompactAdaptation(.popover)
+        }
     }
 
     /// Nothing to show: the scan ended (finished or failed) without a win.
@@ -101,6 +123,29 @@ struct BestWinsCard: View {
         } catch {
             stopped = true
         }
+    }
+}
+
+/// The ⓘ explanation, in plain words for parents and kids.
+private struct BestWinsInfo: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Best wins")
+                .font(.headline)
+            Text("The strongest players this player has beaten in rated games.")
+            Label("The rating is the opponent's rating on the day of the game, not today.",
+                  systemImage: "calendar")
+            Label("\"+150 above\" means the opponent was rated 150 points higher at the time.",
+                  systemImage: "arrow.up.right")
+            Label("Tap a win to see that tournament.", systemImage: "hand.tap")
+            Text("The first check can take a few minutes for players with lots of games. After that it's instant.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .font(.subheadline)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 300, alignment: .leading)
+        .padding(18)
     }
 }
 
