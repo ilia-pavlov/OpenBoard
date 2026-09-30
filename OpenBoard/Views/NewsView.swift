@@ -3,15 +3,18 @@ import SwiftUI
 
 /// News tab: US Chess articles, newest first, a page (~15) at a time — more load
 /// as you reach the bottom — with Kasparov Chess Foundation posts mixed in by
-/// date. A range filter limits how far back it goes. The newest article is a
-/// large photo card; the rest are rows with the article's photo, grouped by
+/// date. Filters pick the publisher and how far back it goes. The newest article
+/// is a large photo card; the rest are rows with the article's photo, grouped by
 /// month. Articles open on the publisher's website, inside the app.
 struct NewsView: View {
     @Environment(AppModel.self) private var model
     @State private var range: NewsRange = .all
+    /// nil shows both publishers.
+    @State private var source: NewsSource?
     /// US Chess articles, in listing order.
     @State private var articles: [NewsArticle] = []
     @State private var kasparov: [NewsArticle] = []
+    @State private var isLoadingKasparov = false
     @State private var nextPage = 0
     @State private var hasMore = true
     @State private var isLoading = false
@@ -23,15 +26,24 @@ struct NewsView: View {
 
     private var cutoff: Date? { range.cutoff() }
 
+    private var feed: [NewsArticle] {
+        switch source {
+        case nil: NewsFeed.merge(articles, kasparov: kasparov, complete: !hasMore)
+        case .usChess: articles
+        case .kasparov: kasparov
+        }
+    }
+
     private var shown: [NewsArticle] {
-        let feed = NewsFeed.merge(articles, kasparov: kasparov, complete: !hasMore)
+        let feed = feed
         guard let cutoff else { return feed }
         return feed.filter { ($0.published ?? .distantPast) >= cutoff }
     }
 
     /// Past the range's cutoff, older pages have nothing to add.
     private var canLoadMore: Bool {
-        guard hasMore else { return false }
+        // The foundation's posts all come at once.
+        guard hasMore, source != .kasparov else { return false }
         guard let cutoff, let oldest = articles.last?.published else { return true }
         return oldest >= cutoff
     }
@@ -40,7 +52,10 @@ struct NewsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 ScreenTitle("News")
-                rangePicker
+                VStack(alignment: .leading, spacing: 8) {
+                    sourcePicker
+                    rangePicker
+                }
                 content
             }
             .padding(16)
@@ -57,31 +72,58 @@ struct NewsView: View {
         }
     }
 
-    // MARK: - Range
+    // MARK: - Filters
 
-    private var rangePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(NewsRange.allCases) { option in
-                    let selected = option == range
-                    Button {
-                        withAnimation(.snappy) { range = option }
-                    } label: {
-                        Text(option.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selected ? Color.black : Color.primary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(selected ? Color.obGold : Color.obCard, in: Capsule())
-                            .overlay(Capsule().strokeBorder(selected ? Color.clear : Color.obHairline))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                    .accessibilityIdentifier(AccessibilityID.newsRange(option.rawValue))
+    private var sourcePicker: some View {
+        chipRow {
+            chip("All sources", selected: source == nil, id: AccessibilityID.newsSource("all")) {
+                source = nil
+            }
+            ForEach(NewsSource.allCases, id: \.self) { option in
+                chip(option.shortName, selected: source == option, id: AccessibilityID.newsSource(option.rawValue)) {
+                    source = option
                 }
             }
         }
+    }
+
+    private var rangePicker: some View {
+        chipRow {
+            ForEach(NewsRange.allCases) { option in
+                chip(option.title, selected: range == option, id: AccessibilityID.newsRange(option.rawValue)) {
+                    range = option
+                }
+            }
+        }
+    }
+
+    private func chipRow(@ViewBuilder chips: () -> some View) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) { chips() }
+        }
         .scrollClipDisabled()
+    }
+
+    private func chip(
+        _ title: String,
+        selected: Bool,
+        id: String,
+        select: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.snappy) { select() }
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(selected ? Color.black : Color.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(selected ? Color.obGold : Color.obCard, in: Capsule())
+                .overlay(Capsule().strokeBorder(selected ? Color.clear : Color.obHairline))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(id)
     }
 
     // MARK: - Content
@@ -109,25 +151,20 @@ struct NewsView: View {
                 .obCard()
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
-        } else if !isLoading && !canLoadMore {
+        } else if !isLoading && !canLoadMore && !(source == .kasparov && isLoadingKasparov) {
             EmptyStateCard(systemImage: "newspaper",
                            title: "No news \(range == .all ? "yet" : "in this range")",
                            message: range == .all ? "Pull down to check again." : "Try a longer range.")
         }
 
-        if canLoadMore {
+        if source == .kasparov && isLoadingKasparov && shown.isEmpty {
+            loadingLabel("Loading news…")
+        } else if canLoadMore {
             // Reaching the bottom loads the next page; a short range keeps loading
             // until it passes its cutoff.
-            HStack(spacing: 10) {
-                ProgressView()
-                Text(articles.isEmpty ? "Loading news…" : "Loading more…")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .onAppear { Task { await loadNextPage() } }
-            .id(articles.count) // a new page re-arms onAppear
+            loadingLabel(articles.isEmpty ? "Loading news…" : "Loading more…")
+                .onAppear { Task { await loadNextPage() } }
+                .id(articles.count) // a new page re-arms onAppear
         } else if !shown.isEmpty {
             Text("Articles open on the publisher's website.")
                 .font(.caption2)
@@ -135,6 +172,17 @@ struct NewsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
         }
+    }
+
+    private func loadingLabel(_ text: LocalizedStringKey) -> some View {
+        HStack(spacing: 10) {
+            ProgressView()
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
     }
 
     /// Rows grouped under "September 2026"-style headers, in order.
@@ -195,6 +243,8 @@ struct NewsView: View {
 
     /// The foundation's posts are extra: the feed shows without them.
     private func loadKasparov(force: Bool = false) async {
+        isLoadingKasparov = true
+        defer { isLoadingKasparov = false }
         if let posts = try? await model.news.kasparov(force: force) {
             kasparov = posts
         }
