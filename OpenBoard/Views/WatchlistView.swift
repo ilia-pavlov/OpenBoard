@@ -61,6 +61,7 @@ struct WatchlistView: View {
                 Section("Saved tournaments") {
                     ForEach(savedTournaments) { row in
                         savedTournamentRow(row)
+                            .deleteDisabled(editMode.isEditing) // Edit is for Rivals & friends only
                     }
                     .onDelete { offsets in
                         for index in offsets { model.removeSaved(savedTournaments[index]) }
@@ -82,6 +83,7 @@ struct WatchlistView: View {
                 Section("My players") {
                     ForEach(primary) { row in
                         watchRow(row, tint: .obGold)
+                            .deleteDisabled(editMode.isEditing) // Edit is for Rivals & friends only
                     }
                     .onDelete { unfollow(from: primary, at: $0) }
                 }
@@ -176,11 +178,13 @@ struct WatchlistView: View {
                         }
                     }
                 }
-                .layoutPriority(1) // the name wins space over the rating digits
-                Spacer()
+                // Fill the row up to the rating so the name gets all the room there
+                // is; the rating never shrinks, so only a long name truncates.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 ClockDigits(value: row.lastKnownRegular,
                             tint: row.isPrimary ? .obGold : .obTeal,
                             size: .body)
+                    .fixedSize()
             }
         }
         .contextMenu {
