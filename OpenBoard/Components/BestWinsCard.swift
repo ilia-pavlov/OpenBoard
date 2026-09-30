@@ -5,8 +5,10 @@ import SwiftUI
 /// the next two sit under it. Each row opens that event's crosstable.
 ///
 /// The first scan of an active player takes a while (one paced request per
-/// event), so wins appear as they're found, above a progress line. Hidden when
-/// the finished scan finds no wins over rated opponents, or fails with none.
+/// event), so wins appear as they're found, above a progress line with Pause.
+/// A paused scan stays paused (across launches) until Resume, which picks up
+/// where it stopped: checked events are cached. Hidden when the finished scan
+/// finds no wins over rated opponents, or fails with none.
 struct BestWinsCard: View {
     let memberID: String
 
@@ -63,8 +65,21 @@ struct BestWinsCard: View {
                 .accessibilityIdentifier(AccessibilityID.bestWins)
             }
         }
-        .task(id: memberID) { await scan() }
+        .task(id: ScanKey(memberID: memberID, paused: isPaused)) {
+            if isPaused {
+                await showSaved()
+            } else {
+                await scan()
+            }
+        }
     }
+
+    private struct ScanKey: Equatable {
+        let memberID: String
+        let paused: Bool
+    }
+
+    private var isPaused: Bool { model.pausedBestWins.contains(memberID) }
 
     private var infoButton: some View {
         Button {
@@ -86,6 +101,7 @@ struct BestWinsCard: View {
 
     /// Nothing to show: the scan ended (finished or failed) without a win.
     private var isHidden: Bool {
+        guard !isPaused else { return false }
         let ended = stopped || progress?.isFinished == true
         return ended && (progress?.wins.isEmpty ?? true)
     }
@@ -93,7 +109,10 @@ struct BestWinsCard: View {
     private var statusRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                if !stopped {
+                if isPaused {
+                    Image(systemName: "pause.circle.fill")
+                        .foregroundStyle(.secondary)
+                } else if !stopped {
                     ProgressView()
                         .controlSize(.small)
                 }
@@ -102,24 +121,68 @@ struct BestWinsCard: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
+                if !stopped {
+                    pauseButton
+                }
             }
             if !stopped, let progress, progress.eventsTotal > 0 {
                 ProgressView(value: Double(progress.eventsChecked), total: Double(progress.eventsTotal))
-                    .tint(Color.obGold)
+                    .tint(isPaused ? Color.secondary : Color.obGold)
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+    }
+
+    /// Pause stops the requests at once; Resume continues from the last
+    /// checked event.
+    private var pauseButton: some View {
+        Button {
+            withAnimation(.snappy) {
+                model.setBestWinsPaused(!isPaused, for: memberID)
+            }
+        } label: {
+            Label(isPaused ? "Resume" : "Pause", systemImage: isPaused ? "play.fill" : "pause.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.obGold)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.obGold.opacity(0.14), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isPaused ? "Resume checking best wins" : "Pause checking best wins")
+        .accessibilityIdentifier(AccessibilityID.bestWinsPause)
     }
 
     private var statusText: String {
+        if isPaused {
+            guard let progress, progress.eventsTotal > 0 else { return String(localized: "Paused") }
+            return String(localized: "Paused · \(progress.eventsChecked) of \(progress.eventsTotal) events checked")
+        }
         guard let progress else { return String(localized: "Loading rated games…") }
         if stopped {
             return String(localized: "Couldn't finish: US Chess is busy. Showing wins found so far.")
         }
         let games = progress.gameCount.formatted()
         return String(localized: "Analyzing \(games) games · \(progress.eventsChecked) of \(progress.eventsTotal) events")
+    }
+
+    /// Paused with nothing on screen (e.g. after a relaunch): show the wins and
+    /// count earlier scans found, from the cache alone.
+    private func showSaved() async {
+        guard progress == nil || scannedMemberID != memberID else { return }
+        scannedMemberID = memberID
+        progress = nil
+        do {
+            for try await step in model.service.bestWinsScan(memberID: memberID, cachedOnly: true) {
+                progress = step
+            }
+        } catch {
+            // Nothing saved yet; the row just says Paused.
+        }
     }
 
     private func scan() async {
@@ -146,9 +209,10 @@ struct BestWinsCard: View {
                 }
             }
         } catch is CancellationError {
-            // Left the screen; cached sections let the next visit pick up from here.
+            // Left the screen or paused; cached sections let it pick up from here.
         } catch {
-            stopped = true
+            // Pausing cancels in-flight requests, which can surface as errors.
+            if !Task.isCancelled && !isPaused { stopped = true }
         }
     }
 }
@@ -167,7 +231,7 @@ private struct BestWinsInfo: View {
             Label("A medal means the opponent is on a US Chess Top 100 list today.",
                   systemImage: "medal")
             Label("Tap a win to see that tournament.", systemImage: "hand.tap")
-            Text("The first check can take a few minutes for players with lots of games. After that it's instant.")
+            Text("The first check can take a few minutes for players with lots of games. Pause stops it and Resume picks up where it left off; after that it's instant.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -47,6 +47,16 @@ final class AppModel {
 
     var selectedTab: AppTab = .myCard
 
+    /// Players whose Best wins scan the user paused. Kept across launches so a
+    /// paused scan doesn't restart every time My Card or the profile appears.
+    private(set) var pausedBestWins: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: "bestWins.paused") ?? [])
+
+    func setBestWinsPaused(_ paused: Bool, for memberID: String) {
+        if paused { pausedBestWins.insert(memberID) } else { pausedBestWins.remove(memberID) }
+        UserDefaults.standard.set(Array(pausedBestWins), forKey: "bestWins.paused")
+    }
+
     /// Defaults come from launch arguments; previews pass them explicitly since
     /// they can't set launch arguments.
     init(dataSource: AppEnvironment.DataSource = AppEnvironment.dataSource,
