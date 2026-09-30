@@ -1,0 +1,1489 @@
+{
+ "Announcement": {
+  "fields": {
+   "body": {
+    "items": {
+     "fields": {
+      "format": {
+       "types": [
+        "string"
+       ]
+      },
+      "processed": {
+       "types": [
+        "string"
+       ]
+      },
+      "summary": {
+       "types": [
+        "string"
+       ]
+      },
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_banner_line": {
+    "types": [
+     "array"
+    ]
+   },
+   "field_event_address": {
+    "items": {
+     "fields": {
+      "address_line1": {
+       "types": [
+        "string"
+       ]
+      },
+      "address_line2": {
+       "types": [
+        "string"
+       ]
+      },
+      "address_line3": {
+       "types": [
+        "null"
+       ]
+      },
+      "administrative_area": {
+       "types": [
+        "string"
+       ]
+      },
+      "country_code": {
+       "types": [
+        "string"
+       ]
+      },
+      "dependent_locality": {
+       "types": [
+        "null"
+       ]
+      },
+      "langcode": {
+       "types": [
+        "null"
+       ]
+      },
+      "locality": {
+       "types": [
+        "string"
+       ]
+      },
+      "postal_code": {
+       "types": [
+        "string"
+       ]
+      },
+      "sorting_code": {
+       "types": [
+        "null"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_event_dates": {
+    "items": {
+     "fields": {
+      "end_value": {
+       "types": [
+        "string"
+       ]
+      },
+      "infinite": {
+       "types": [
+        "bool"
+       ]
+      },
+      "rrule": {
+       "types": [
+        "string"
+       ]
+      },
+      "timezone": {
+       "types": [
+        "string"
+       ]
+      },
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_event_location_name": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_fide_rated": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "bool"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_geofield": {
+    "items": {
+     "fields": {
+      "bottom": {
+       "types": [
+        "number"
+       ]
+      },
+      "geo_type": {
+       "types": [
+        "string"
+       ]
+      },
+      "geohash": {
+       "types": [
+        "string"
+       ]
+      },
+      "lat": {
+       "types": [
+        "number"
+       ]
+      },
+      "latlon": {
+       "types": [
+        "string"
+       ]
+      },
+      "left": {
+       "types": [
+        "number"
+       ]
+      },
+      "lon": {
+       "types": [
+        "number"
+       ]
+      },
+      "right": {
+       "types": [
+        "number"
+       ]
+      },
+      "top": {
+       "types": [
+        "number"
+       ]
+      },
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_online_event": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "bool"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_organizer_email_address": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_organizer_name": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_organizer_phone_number": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "field_organizer_website": {
+    "items": {
+     "fields": {
+      "options": {
+       "types": [
+        "array"
+       ]
+      },
+      "title": {
+       "types": [
+        "string"
+       ]
+      },
+      "uri": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "title": {
+    "items": {
+     "fields": {
+      "value": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Crosstable": {
+  "fields": {
+   "hasNextPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "hasPreviousPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "items": {
+    "items": {
+     "fields": {
+      "firstName": {
+       "types": [
+        "string"
+       ]
+      },
+      "lastName": {
+       "types": [
+        "string"
+       ]
+      },
+      "memberId": {
+       "types": [
+        "string"
+       ]
+      },
+      "ordinal": {
+       "types": [
+        "number"
+       ]
+      },
+      "pairingNumber": {
+       "types": [
+        "number"
+       ]
+      },
+      "playerId": {
+       "types": [
+        "string"
+       ]
+      },
+      "ratings": {
+       "items": {
+        "fields": {
+         "postProvisionalGameCount": {
+          "types": [
+           "number"
+          ]
+         },
+         "postRating": {
+          "types": [
+           "number"
+          ]
+         },
+         "postRatingDecimal": {
+          "types": [
+           "number"
+          ]
+         },
+         "preRating": {
+          "types": [
+           "number"
+          ]
+         },
+         "preRatingDecimal": {
+          "types": [
+           "number"
+          ]
+         },
+         "ratingSystem": {
+          "types": [
+           "string"
+          ]
+         }
+        },
+        "types": [
+         "object"
+        ]
+       },
+       "types": [
+        "array"
+       ]
+      },
+      "roundOutcomes": {
+       "items": {
+        "fields": {
+         "color": {
+          "types": [
+           "string"
+          ]
+         },
+         "id": {
+          "types": [
+           "string"
+          ]
+         },
+         "opponentFirstName": {
+          "types": [
+           "string"
+          ]
+         },
+         "opponentLastName": {
+          "types": [
+           "string"
+          ]
+         },
+         "opponentMemberId": {
+          "types": [
+           "string"
+          ]
+         },
+         "opponentOrdinal": {
+          "types": [
+           "number"
+          ]
+         },
+         "opponentPairingNumber": {
+          "types": [
+           "number"
+          ]
+         },
+         "opponentPlayerId": {
+          "types": [
+           "string"
+          ]
+         },
+         "opponentRoundNumber": {
+          "types": [
+           "number"
+          ]
+         },
+         "outcome": {
+          "types": [
+           "string"
+          ]
+         },
+         "playerRoundNumber": {
+          "types": [
+           "number"
+          ]
+         },
+         "roundNumber": {
+          "types": [
+           "number"
+          ]
+         }
+        },
+        "types": [
+         "object"
+        ]
+       },
+       "types": [
+        "array"
+       ]
+      },
+      "score": {
+       "types": [
+        "number"
+       ]
+      },
+      "stateRep": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "offset": {
+    "types": [
+     "number"
+    ]
+   },
+   "pageSize": {
+    "types": [
+     "number"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Event": {
+  "fields": {
+   "affiliate": {
+    "fields": {
+     "expirationDate": {
+      "types": [
+       "string"
+      ]
+     },
+     "id": {
+      "types": [
+       "string"
+      ]
+     },
+     "name": {
+      "types": [
+       "string"
+      ]
+     },
+     "status": {
+      "types": [
+       "string"
+      ]
+     }
+    },
+    "types": [
+     "object"
+    ]
+   },
+   "city": {
+    "types": [
+     "string"
+    ]
+   },
+   "countryCode": {
+    "types": [
+     "string"
+    ]
+   },
+   "createdDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "endDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "firstRatedDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "gameCount": {
+    "types": [
+     "number"
+    ]
+   },
+   "id": {
+    "types": [
+     "string"
+    ]
+   },
+   "isWomens": {
+    "types": [
+     "bool"
+    ]
+   },
+   "lastRatedDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "name": {
+    "types": [
+     "string"
+    ]
+   },
+   "playerCount": {
+    "types": [
+     "number"
+    ]
+   },
+   "sectionCount": {
+    "types": [
+     "number"
+    ]
+   },
+   "sections": {
+    "items": {
+     "fields": {
+      "id": {
+       "types": [
+        "string"
+       ]
+      },
+      "name": {
+       "types": [
+        "string"
+       ]
+      },
+      "number": {
+       "types": [
+        "number"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "startDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "stateCode": {
+    "types": [
+     "string"
+    ]
+   },
+   "status": {
+    "types": [
+     "string"
+    ]
+   },
+   "submittedBy": {
+    "fields": {
+     "expirationDate": {
+      "types": [
+       "string"
+      ]
+     },
+     "fideCountry": {
+      "types": [
+       "string"
+      ]
+     },
+     "firstName": {
+      "types": [
+       "string"
+      ]
+     },
+     "id": {
+      "types": [
+       "string"
+      ]
+     },
+     "jurisdiction": {
+      "types": [
+       "string"
+      ]
+     },
+     "lastName": {
+      "types": [
+       "string"
+      ]
+     },
+     "stateRep": {
+      "types": [
+       "string"
+      ]
+     },
+     "status": {
+      "types": [
+       "string"
+      ]
+     }
+    },
+    "types": [
+     "object"
+    ]
+   },
+   "zipCode": {
+    "types": [
+     "string"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Games (Best wins)": {
+  "fields": {
+   "hasNextPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "hasPreviousPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "items": {
+    "items": {
+     "fields": {
+      "event": {
+       "fields": {
+        "endDate": {
+         "types": [
+          "string"
+         ]
+        },
+        "id": {
+         "types": [
+          "string"
+         ]
+        },
+        "name": {
+         "types": [
+          "string"
+         ]
+        },
+        "startDate": {
+         "types": [
+          "string"
+         ]
+        },
+        "stateCode": {
+         "types": [
+          "string"
+         ]
+        }
+       },
+       "types": [
+        "object"
+       ]
+      },
+      "opponent": {
+       "fields": {
+        "color": {
+         "types": [
+          "string"
+         ]
+        },
+        "firstName": {
+         "types": [
+          "string"
+         ]
+        },
+        "id": {
+         "types": [
+          "string"
+         ]
+        },
+        "lastName": {
+         "types": [
+          "string"
+         ]
+        },
+        "outcome": {
+         "types": [
+          "string"
+         ]
+        },
+        "stateRep": {
+         "types": [
+          "string"
+         ]
+        }
+       },
+       "types": [
+        "object"
+       ]
+      },
+      "player": {
+       "fields": {
+        "color": {
+         "types": [
+          "string"
+         ]
+        },
+        "outcome": {
+         "types": [
+          "string"
+         ]
+        }
+       },
+       "types": [
+        "object"
+       ]
+      },
+      "ratingSystem": {
+       "types": [
+        "string"
+       ]
+      },
+      "section": {
+       "fields": {
+        "id": {
+         "types": [
+          "string"
+         ]
+        },
+        "name": {
+         "types": [
+          "string"
+         ]
+        },
+        "number": {
+         "types": [
+          "number"
+         ]
+        }
+       },
+       "types": [
+        "object"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "offset": {
+    "types": [
+     "number"
+    ]
+   },
+   "pageSize": {
+    "types": [
+     "number"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Name search": {
+  "fields": {
+   "hasNextPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "hasPreviousPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "items": {
+    "items": {
+     "fields": {
+      "expirationDate": {
+       "types": [
+        "string"
+       ]
+      },
+      "fideCountry": {
+       "types": [
+        "string"
+       ]
+      },
+      "fideId": {
+       "types": [
+        "string"
+       ]
+      },
+      "fideTitle": {
+       "types": [
+        "string"
+       ]
+      },
+      "firstName": {
+       "types": [
+        "string"
+       ]
+      },
+      "gender": {
+       "types": [
+        "string"
+       ]
+      },
+      "id": {
+       "types": [
+        "string"
+       ]
+      },
+      "jurisdiction": {
+       "types": [
+        "string"
+       ]
+      },
+      "lastChangedDate": {
+       "types": [
+        "string"
+       ]
+      },
+      "lastName": {
+       "types": [
+        "string"
+       ]
+      },
+      "rank": {
+       "types": [
+        "number"
+       ]
+      },
+      "ratings": {
+       "items": {
+        "fields": {
+         "floor": {
+          "types": [
+           "number"
+          ]
+         },
+         "gamesPlayed": {
+          "types": [
+           "number"
+          ]
+         },
+         "isProvisional": {
+          "types": [
+           "bool"
+          ]
+         },
+         "rating": {
+          "types": [
+           "number"
+          ]
+         },
+         "ratingSystem": {
+          "types": [
+           "string"
+          ]
+         }
+        },
+        "types": [
+         "object"
+        ]
+       },
+       "types": [
+        "array"
+       ]
+      },
+      "stateRank": {
+       "types": [
+        "number"
+       ]
+      },
+      "stateRep": {
+       "types": [
+        "string"
+       ]
+      },
+      "status": {
+       "types": [
+        "string"
+       ]
+      },
+      "tdCertExpirationDate": {
+       "types": [
+        "string"
+       ]
+      },
+      "tdCertStatus": {
+       "types": [
+        "string"
+       ]
+      },
+      "tdLevel": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "offset": {
+    "types": [
+     "number"
+    ]
+   },
+   "pageSize": {
+    "types": [
+     "number"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Player history": {
+  "fields": {
+   "hasNextPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "hasPreviousPage": {
+    "types": [
+     "bool"
+    ]
+   },
+   "items": {
+    "items": {
+     "fields": {
+      "endDate": {
+       "types": [
+        "string"
+       ]
+      },
+      "event": {
+       "fields": {
+        "endDate": {
+         "types": [
+          "string"
+         ]
+        },
+        "id": {
+         "types": [
+          "string"
+         ]
+        },
+        "name": {
+         "types": [
+          "string"
+         ]
+        },
+        "startDate": {
+         "types": [
+          "string"
+         ]
+        },
+        "stateCode": {
+         "types": [
+          "string"
+         ]
+        }
+       },
+       "types": [
+        "object"
+       ]
+      },
+      "format": {
+       "types": [
+        "string"
+       ]
+      },
+      "id": {
+       "types": [
+        "string"
+       ]
+      },
+      "ratingRecords": {
+       "items": {
+        "fields": {
+         "eventId": {
+          "types": [
+           "string"
+          ]
+         },
+         "postRating": {
+          "types": [
+           "number"
+          ]
+         },
+         "postRatingDecimal": {
+          "types": [
+           "number"
+          ]
+         },
+         "preRating": {
+          "types": [
+           "number"
+          ]
+         },
+         "preRatingDecimal": {
+          "types": [
+           "number"
+          ]
+         },
+         "ratingSource": {
+          "types": [
+           "string"
+          ]
+         },
+         "sectionNumber": {
+          "types": [
+           "number"
+          ]
+         }
+        },
+        "types": [
+         "object"
+        ]
+       },
+       "types": [
+        "array"
+       ]
+      },
+      "ratingSystem": {
+       "types": [
+        "string"
+       ]
+      },
+      "sectionName": {
+       "types": [
+        "string"
+       ]
+      },
+      "sectionNumber": {
+       "types": [
+        "number"
+       ]
+      },
+      "startDate": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "offset": {
+    "types": [
+     "number"
+    ]
+   },
+   "pageSize": {
+    "types": [
+     "number"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Player profile": {
+  "fields": {
+   "expirationDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "fideCountry": {
+    "types": [
+     "string"
+    ]
+   },
+   "fideId": {
+    "types": [
+     "string"
+    ]
+   },
+   "fideTitle": {
+    "types": [
+     "string"
+    ]
+   },
+   "firstName": {
+    "types": [
+     "string"
+    ]
+   },
+   "gender": {
+    "types": [
+     "string"
+    ]
+   },
+   "id": {
+    "types": [
+     "string"
+    ]
+   },
+   "jurisdiction": {
+    "types": [
+     "string"
+    ]
+   },
+   "lastChangedDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "lastName": {
+    "types": [
+     "string"
+    ]
+   },
+   "rank": {
+    "types": [
+     "number"
+    ]
+   },
+   "ratings": {
+    "items": {
+     "fields": {
+      "floor": {
+       "types": [
+        "number"
+       ]
+      },
+      "isProvisional": {
+       "types": [
+        "bool"
+       ]
+      },
+      "rating": {
+       "types": [
+        "number"
+       ]
+      },
+      "ratingSystem": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   },
+   "stateRank": {
+    "types": [
+     "number"
+    ]
+   },
+   "stateRep": {
+    "types": [
+     "string"
+    ]
+   },
+   "status": {
+    "types": [
+     "string"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Rank totals": {
+  "items": {
+   "fields": {
+    "jurisdiction": {
+     "types": [
+      "string"
+     ]
+    },
+    "maxRank": {
+     "types": [
+      "number"
+     ]
+    },
+    "ratingSource": {
+     "types": [
+      "string"
+     ]
+    }
+   },
+   "types": [
+    "object"
+   ]
+  },
+  "types": [
+   "array"
+  ]
+ },
+ "Top 100 catalog": {
+  "fields": {
+   "items": {
+    "items": {
+     "fields": {
+      "fideUsaOnly": {
+       "types": [
+        "bool"
+       ]
+      },
+      "gender": {
+       "types": [
+        "string"
+       ]
+      },
+      "id": {
+       "types": [
+        "string"
+       ]
+      },
+      "maxAge": {
+       "types": [
+        "number"
+       ]
+      },
+      "minAge": {
+       "types": [
+        "number"
+       ]
+      },
+      "name": {
+       "types": [
+        "string"
+       ]
+      },
+      "ratingSource": {
+       "types": [
+        "string"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ },
+ "Top 100 list": {
+  "fields": {
+   "maxAge": {
+    "types": [
+     "number"
+    ]
+   },
+   "minAge": {
+    "types": [
+     "number"
+    ]
+   },
+   "name": {
+    "types": [
+     "string"
+    ]
+   },
+   "ratingSource": {
+    "types": [
+     "string"
+    ]
+   },
+   "reportDate": {
+    "types": [
+     "string"
+    ]
+   },
+   "topPlayerReportDefinitionId": {
+    "types": [
+     "string"
+    ]
+   },
+   "topPlayers": {
+    "items": {
+     "fields": {
+      "countryCode": {
+       "types": [
+        "string"
+       ]
+      },
+      "firstName": {
+       "types": [
+        "string"
+       ]
+      },
+      "gender": {
+       "types": [
+        "string"
+       ]
+      },
+      "id": {
+       "types": [
+        "string"
+       ]
+      },
+      "lastName": {
+       "types": [
+        "string"
+       ]
+      },
+      "ordinal": {
+       "types": [
+        "number"
+       ]
+      },
+      "rating": {
+       "types": [
+        "number"
+       ]
+      },
+      "stateRep": {
+       "types": [
+        "string"
+       ]
+      },
+      "status": {
+       "types": [
+        "string"
+       ]
+      },
+      "tieIndex": {
+       "types": [
+        "number"
+       ]
+      }
+     },
+     "types": [
+      "object"
+     ]
+    },
+    "types": [
+     "array"
+    ]
+   }
+  },
+  "types": [
+   "object"
+  ]
+ }
+}

@@ -1,0 +1,91 @@
+name: API monitor
+
+# Contract monitoring for the public US Chess services the app reads
+# (ratings-api.uschess.org and new.uschess.org). Neither is a supported public
+# API, so they can change without notice.
+#
+# scripts/api_contract_check.py reads the app's endpoints, query parameters and
+# parser patterns from Shared/USChessEndpoints.swift (the one place they're
+# written), calls each endpoint and compares the response's shape with the
+# snapshot in scripts/api_contract.json. No app build: Python standard library
+# on a Linux runner, about a minute.
+#
+# A failure opens a GitHub issue labelled `api-monitor` (or comments on the open
+# one); the next passing run closes it. "Run workflow" runs it on demand.
+on:
+  schedule:
+    # Morning and evening, US Eastern: 07:00 and 19:00 EDT (06:00 / 18:00 EST).
+    # GitHub may start scheduled runs a few minutes late.
+    - cron: "0 11 * * *"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: api-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  contracts:
+    name: US Chess API contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check endpoints against their contract
+        run: |
+          set -o pipefail
+          # One retry: a live service can blip; a real contract break fails twice.
+          python3 scripts/api_contract_check.py 2>&1 | tee report.txt \
+            || { echo "Retrying in 60 s…"; sleep 60; python3 scripts/api_contract_check.py 2>&1 | tee report.txt; }
+
+      - name: Summary
+        if: always()
+        run: |
+          { echo '## US Chess API contracts'; echo; echo '```'; cat report.txt 2>/dev/null; echo '```'; } \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      # ---- Alerting: one open issue while contracts are broken ----
+
+      - name: Open or update the alert issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create api-monitor --color B60205 \
+            --description "US Chess API contract monitor" --force >/dev/null
+          {
+            echo "The US Chess API contract check failed on $(date -u '+%Y-%m-%d %H:%M UTC')."
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            echo '```'
+            cat report.txt 2>/dev/null || echo "No report; see the run log."
+            echo '```'
+            echo
+            echo "If the change is harmless (e.g. a renamed field the app doesn't read), accept it with"
+            echo "\`python3 scripts/api_contract_check.py --record\` and commit scripts/api_contract.json."
+          } > body.md
+          open=$(gh issue list --label api-monitor --state open --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "API monitor: US Chess contract check failing" \
+              --label api-monitor --body-file body.md
+          fi
+
+      - name: Close the alert issue once passing again
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for n in $(gh issue list --label api-monitor --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Contract check passes again: $RUN_URL"
+          done

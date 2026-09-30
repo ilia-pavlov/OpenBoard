@@ -30,7 +30,7 @@ actor LiveRatingsService: RatingsProviding {
     // MARK: RatingsProviding
 
     func player(id: String) async throws -> Player {
-        async let member: APIMember = get("members/\(id)")
+        async let member: APIMember = get(USChess.fill(USChess.Ratings.member, ["memberID": id]))
         async let sections = allSections(memberID: id)
         async let ranks = maxRanks()
         return try await USCFMapper.player(member: member,
@@ -43,7 +43,8 @@ actor LiveRatingsService: RatingsProviding {
     /// otherwise Rating History starts partway through their career.
     private func allSections(memberID id: String) async throws -> [APIMemberSection] {
         try await Self.collectPages(pageSize: 100) { offset, size in
-            try await self.get("members/\(id)/sections", query: ["Size": String(size), "Offset": String(offset)])
+            try await self.get(USChess.fill(USChess.Ratings.memberSections, ["memberID": id]),
+                     query: [USChess.Params.size: String(size), USChess.Params.offset: String(offset)])
         }
     }
 
@@ -64,18 +65,19 @@ actor LiveRatingsService: RatingsProviding {
     func search(_ query: String) async throws -> [PlayerSummary] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         if trimmed.count == 8, trimmed.allSatisfy(\.isNumber) {
-            let member: APIMember = try await get("members/\(trimmed)")
+            let member: APIMember = try await get(USChess.fill(USChess.Ratings.member, ["memberID": trimmed]))
             return [USCFMapper.summary(member: member)]
         }
         // The API's fuzzy name search is the `Fuzzy` query parameter; pagination
         // uses `Offset`/`Size`. An unrecognized param (e.g. `search`) is silently
         // ignored and the endpoint returns the default top-rated list.
-        let page: APIPage<APIMember> = try await get("members", query: ["Fuzzy": trimmed, "Size": "40"])
+        let page: APIPage<APIMember> = try await get(USChess.Ratings.memberSearch,
+                                                              query: [USChess.Params.fuzzy: trimmed, USChess.Params.size: "40"])
         return page.items.map(USCFMapper.summary)
     }
 
     func event(id: String) async throws -> ChessEvent {
-        let event: APIRatedEvent = try await get("rated-events/\(id)")
+        let event: APIRatedEvent = try await get(USChess.fill(USChess.Ratings.ratedEvent, ["eventID": id]))
         let refs = (event.sections ?? []).sorted { $0.number < $1.number }
 
         let sections: [EventSection] = try await withThrowingTaskGroup(of: (Int, EventSection).self) { group in
@@ -101,8 +103,10 @@ actor LiveRatingsService: RatingsProviding {
         // RatingSource=R returns regular and dual-rated games. Very active players
         // have well over 1,000 games, hence the higher page cap.
         let games: [APIMemberGame] = try await Self.collectPages(pageSize: 100, maxPages: 50) { offset, size in
-            try await self.get("members/\(id)/games",
-                               query: ["RatingSource": "R", "Size": String(size), "Offset": String(offset)])
+            try await self.get(USChess.fill(USChess.Ratings.memberGames, ["memberID": id]),
+                               query: [USChess.Params.ratingSource: "R",
+                                       USChess.Params.size: String(size),
+                                       USChess.Params.offset: String(offset)])
         }
         return RatedWins(gameCount: games.count, wins: games.compactMap(USCFMapper.regularWin))
     }
@@ -121,8 +125,8 @@ actor LiveRatingsService: RatingsProviding {
         var offset = 0
         for _ in 0..<5 { // safety cap: 500 players per section
             let page: APIPage<APIStanding> = try await get(
-                "rated-events/\(eventID)/sections/\(section)/standings",
-                query: ["Size": "100", "Offset": String(offset)])
+                USChess.fill(USChess.Ratings.sectionStandings, ["eventID": eventID, "section": String(section)]),
+                query: [USChess.Params.size: "100", USChess.Params.offset: String(offset)])
             all.append(contentsOf: page.items)
             guard page.hasNextPage == true else { break }
             offset += page.items.count
@@ -132,18 +136,19 @@ actor LiveRatingsService: RatingsProviding {
     }
 
     func topListDefinitions() async throws -> [TopListDefinition] {
-        let page: APIPage<APITopListDefinition> = try await get("top-players", query: ["Size": "200"])
+        let page: APIPage<APITopListDefinition> = try await get(USChess.Ratings.topListCatalog,
+                                                                        query: [USChess.Params.size: "200"])
         return USCFMapper.topListDefinitions(page.items)
     }
 
     func topList(_ definition: TopListDefinition) async throws -> TopList {
-        let list: APITopList = try await get("top-players/\(definition.id)")
+        let list: APITopList = try await get(USChess.fill(USChess.Ratings.topList, ["listID": definition.id]))
         return USCFMapper.topList(list, definition: definition)
     }
 
     private func maxRanks() async throws -> [APIMaxRank] {
         if let cachedMaxRanks { return cachedMaxRanks }
-        let ranks: [APIMaxRank] = try await get("members/max-ranks")
+        let ranks: [APIMaxRank] = try await get(USChess.Ratings.maxRanks)
         cachedMaxRanks = ranks
         return ranks
     }

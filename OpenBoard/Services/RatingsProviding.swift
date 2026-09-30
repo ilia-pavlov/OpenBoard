@@ -43,7 +43,7 @@ enum AppEnvironment {
         ProcessInfo.processInfo.arguments.contains("-mock") ? .mock : .live
     }
 
-    static let baseURL = URL(string: "https://ratings-api.uschess.org/api/v1")!
+    static let baseURL = URL(string: USChess.Ratings.base)!
     static let userAgent = "OpenBoard-iOS/1.0"
     static let cacheTTL: TimeInterval = 5 * 60
 

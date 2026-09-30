@@ -493,6 +493,26 @@ final class RatingHistoryTests: Runner {
 
 All green on the iOS 26.5 simulator.
 
+### API contract monitor — twice a day
+
+The US Chess services aren't a supported public API, so they can change without
+notice. Every endpoint, query parameter and HTML parser pattern the app uses is
+written in **one file**, `Shared/USChessEndpoints.swift`. The app builds its URLs
+and parses its pages from it, and `scripts/api_contract_check.py` **reads the same
+file** to call each endpoint and compare the response's shape (fields and types,
+not values) with the snapshot in `scripts/api_contract.json`. An endpoint added to
+the Swift file without a check fails the monitor.
+
+The **API monitor** workflow (`.github/workflows/api-monitor.yml`) runs it at
+07:00 and 19:00 US Eastern on a Linux runner (no app build, about a minute), and
+on demand from the Actions tab. A failure opens a GitHub issue labelled
+`api-monitor`; the next passing run closes it.
+
+```bash
+python3 scripts/api_contract_check.py            # check (standard library only)
+python3 scripts/api_contract_check.py --record   # accept today's response shapes
+```
+
 ## Definition of done — status
 
 - ✅ Builds clean on iOS 26 simulator (Swift 6, no warnings-as-errors surprises).
