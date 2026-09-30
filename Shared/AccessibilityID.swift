@@ -53,6 +53,7 @@ enum AccessibilityID {
 
     static func searchResult(_ memberID: String) -> String { "search-result-\(memberID)" }
     static let browseTop100 = "browse-top-100"
+    static let browseJoinUSChess = "browse-join-us-chess"
     static func topListEntry(_ memberID: String) -> String { "toplist-\(memberID)" }
 
     // MARK: Events & upcoming tournaments
