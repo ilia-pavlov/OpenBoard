@@ -71,6 +71,22 @@ struct TournamentDetail: Codable, Sendable, Hashable {
         }
         return text
     }
+
+    /// Plain text for the clipboard: named links keep their address in
+    /// parentheses ("Register here (https://…)") so pasting loses nothing.
+    var copyableAnnouncement: String {
+        let text = formattedAnnouncement
+        var out = ""
+        for (link, range) in text.runs[\.link] {
+            let label = String(text[range].characters)
+            out += label
+            if let link, link.scheme?.hasPrefix("http") == true,
+               !label.contains(link.host() ?? link.absoluteString) {
+                out += " (\(link.absoluteString))"
+            }
+        }
+        return out
+    }
 }
 
 /// A major event from the US Chess "Plan Ahead Calendar": national championships

@@ -73,6 +73,11 @@ struct UpcomingTournamentTests {
         #expect(text[heading].inlinePresentationIntent?.contains(.stronglyEmphasized) == true)
         let email = try #require(text.range(of: "dashchessacademy@dashnmore.com"))
         #expect(text[email].link?.scheme == "mailto") // bare email detected
+
+        let copied = detail.copyableAnnouncement
+        #expect(copied.contains("Register here (https://forms.gle/7qqwd7Bpb6AH19mMA)"))
+        #expect(copied.contains("contact DCA via dashchessacademy@dashnmore.com"))
+        #expect(!copied.contains("**"))
     }
 
     @Test(arguments: [
