@@ -2,13 +2,16 @@ import SafariServices
 import SwiftUI
 
 /// News tab: US Chess articles, newest first, a page (~15) at a time — more load
-/// as you reach the bottom. A range filter limits how far back it goes. The
-/// newest article is a large photo card; the rest are rows with the article's
-/// photo, grouped by month. Articles open on the website, inside the app.
+/// as you reach the bottom — with Kasparov Chess Foundation posts mixed in by
+/// date. A range filter limits how far back it goes. The newest article is a
+/// large photo card; the rest are rows with the article's photo, grouped by
+/// month. Articles open on the publisher's website, inside the app.
 struct NewsView: View {
     @Environment(AppModel.self) private var model
     @State private var range: NewsRange = .all
+    /// US Chess articles, in listing order.
     @State private var articles: [NewsArticle] = []
+    @State private var kasparov: [NewsArticle] = []
     @State private var nextPage = 0
     @State private var hasMore = true
     @State private var isLoading = false
@@ -21,8 +24,9 @@ struct NewsView: View {
     private var cutoff: Date? { range.cutoff() }
 
     private var shown: [NewsArticle] {
-        guard let cutoff else { return articles }
-        return articles.filter { ($0.published ?? .distantPast) >= cutoff }
+        let feed = NewsFeed.merge(articles, kasparov: kasparov, complete: !hasMore)
+        guard let cutoff else { return feed }
+        return feed.filter { ($0.published ?? .distantPast) >= cutoff }
     }
 
     /// Past the range's cutoff, older pages have nothing to add.
@@ -45,6 +49,7 @@ struct NewsView: View {
         .background(Color.obBackground)
         .toolbar(.hidden, for: .navigationBar)
         .task { if articles.isEmpty { await loadNextPage() } }
+        .task { if kasparov.isEmpty { await loadKasparov() } }
         .refreshable { await reload() }
         .fullScreenCover(item: $reading) { article in
             SafariView(url: article.link) { reading = nil }
@@ -84,7 +89,7 @@ struct NewsView: View {
     @ViewBuilder
     private var content: some View {
         let shown = shown
-        if let errorMessage, articles.isEmpty {
+        if let errorMessage, shown.isEmpty {
             ErrorCard(message: errorMessage, cachedAt: nil) {
                 Task { await reload() }
             }
@@ -124,7 +129,7 @@ struct NewsView: View {
             .onAppear { Task { await loadNextPage() } }
             .id(articles.count) // a new page re-arms onAppear
         } else if !shown.isEmpty {
-            Text("Articles open on new.uschess.org.")
+            Text("Articles open on the publisher's website.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity)
@@ -162,7 +167,7 @@ struct NewsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(lastOpenedID == article.id ? .isSelected : [])
-        .accessibilityHint("Opens the article on US Chess")
+        .accessibilityHint("Opens the article on \(article.source.name)")
         .accessibilityIdentifier(AccessibilityID.newsArticle(article.id))
     }
 
@@ -188,7 +193,15 @@ struct NewsView: View {
         }
     }
 
+    /// The foundation's posts are extra: the feed shows without them.
+    private func loadKasparov(force: Bool = false) async {
+        if let posts = try? await model.news.kasparov(force: force) {
+            kasparov = posts
+        }
+    }
+
     private func reload() async {
+        async let posts: Void = loadKasparov(force: true)
         do {
             let page = try await model.news.page(0, force: true)
             articles = NewsParser.settleDates(page.articles)
@@ -198,6 +211,7 @@ struct NewsView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+        await posts
     }
 }
 
@@ -213,7 +227,7 @@ private struct HeroNewsCard: View {
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
-                    if let when = Format.newsDate(article.published) {
+                    if let when = NewsByline.text(article) {
                         Text(when.uppercased())
                             .font(.caption2.weight(.bold))
                             .kerning(1)
@@ -277,7 +291,7 @@ private struct NewsRow: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
-                if let when = Format.newsDate(article.published) {
+                if let when = NewsByline.text(article) {
                     Text(when)
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.tertiary)
@@ -288,6 +302,16 @@ private struct NewsRow: View {
         .padding(14)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The date, and the publisher when it isn't US Chess:
+/// "3 days ago · Kasparov Chess Foundation".
+private enum NewsByline {
+    static func text(_ article: NewsArticle) -> String? {
+        let parts = [Format.newsDate(article.published),
+                     article.source == .usChess ? nil : article.source.name].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 

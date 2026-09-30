@@ -1,6 +1,8 @@
 import Foundation
 
-/// News comes from the US Chess website, which has no news API:
+/// News comes from two websites.
+///
+/// US Chess has no news API:
 ///
 /// - **Articles** from the news listing, `/news?page=N`: about 15 per page,
 ///   newest first, each with a photo, title and teaser (no dates).
@@ -8,12 +10,18 @@ import Foundation
 ///   days later when an article was edited) and, exactly, from the main RSS
 ///   feed for the newest ten.
 ///
+/// The Kasparov Chess Foundation's WordPress site serves its posts as JSON
+/// (`/wp-json/wp/v2/posts`), dated, with the first photo in each post.
+///
 /// Articles themselves open on the website.
 protocol NewsProviding: Sendable {
     /// One page of the listing, without dates.
     func listing(page: Int) async throws -> NewsPage
     /// Best-known publish date per article path ("/news/…").
     func dates() async throws -> [String: Date]
+    /// Kasparov Chess Foundation posts, newest first. The foundation posts about
+    /// once or twice a month, so one request reaches back years.
+    func kasparovArticles() async throws -> [NewsArticle]
 }
 
 struct LiveNewsService: NewsProviding {
@@ -49,6 +57,14 @@ struct LiveNewsService: NewsProviding {
             dates.merge(NewsParser.rssDates(rss)) { _, exact in exact }
         }
         return dates
+    }
+
+    func kasparovArticles() async throws -> [NewsArticle] {
+        var components = URLComponents(url: NewsParser.kasparovSite.appending(path: "wp-json/wp/v2/posts"),
+                                       resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "per_page", value: "50"),
+                                 URLQueryItem(name: "_fields", value: "date_gmt,link,title,excerpt,content")]
+        return try NewsParser.kasparovPosts(try await fetch(components.url!))
     }
 
     private func fetch(_ url: URL) async throws -> Data {
@@ -96,6 +112,13 @@ final class CachedNewsService: Sendable {
             page.articles[index].published = dates[page.articles[index].link.path()]
         }
         return page
+    }
+
+    /// Kasparov Chess Foundation articles, kept 12 hours like the date index.
+    func kasparov(force: Bool = false) async throws -> [NewsArticle] {
+        try await cached(key: "news-kcf", ttl: Self.olderTTL, force: force) {
+            try await self.upstream.kasparovArticles()
+        }
     }
 
     private func cached<T: Codable & Sendable>(
@@ -167,6 +190,32 @@ enum NewsParser {
             .trimmingCharacters(in: .whitespaces)
     }
 
+    static let kasparovSite = URL(string: "https://kasparovchessfoundation.org")!
+
+    /// Articles from a WordPress posts response. The foundation's posts have no
+    /// featured image, so the photo is the first one in the post.
+    static func kasparovPosts(_ data: Data) throws -> [NewsArticle] {
+        struct Rendered: Decodable { var rendered: String }
+        struct Post: Decodable {
+            var date_gmt: String
+            var link: URL
+            var title: Rendered
+            var excerpt: Rendered
+            var content: Rendered
+        }
+        return try JSONDecoder().decode([Post].self, from: data).compactMap { post in
+            let title = TournamentParser.clean(post.title.rendered)
+            guard !title.isEmpty else { return nil }
+            let photo = TournamentParser.capture(#"<img[^>]+src="(https?://[^"]+)""#, in: post.content.rendered)
+            return NewsArticle(title: title,
+                               link: post.link,
+                               published: wordPressDateFormatter.date(from: post.date_gmt),
+                               imageURL: photo.flatMap { URL(string: TournamentParser.unescape($0)) },
+                               summary: TournamentParser.clean(post.excerpt.rendered)
+                                   .replacingOccurrences(of: " […]", with: "…"))
+        }
+    }
+
     /// "/news/…" → lastmod, from one sitemap page.
     static func sitemapDates(_ xml: String) -> [String: Date] {
         let formatter = ISO8601DateFormatter()
@@ -207,6 +256,15 @@ enum NewsParser {
             return article
         }
     }
+
+    /// WordPress's `date_gmt`: "2026-07-11T15:17:17", in UTC.
+    private static let wordPressDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        return formatter
+    }()
 
     private static let pubDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -263,7 +321,7 @@ private final class RSSItemCollector: NSObject, XMLParserDelegate {
 // MARK: - Mock
 
 /// Synthetic articles for demo mode and UI tests (no network): three pages
-/// reaching back about four months.
+/// reaching back about four months, plus a few foundation posts in between.
 struct MockNewsService: NewsProviding {
     private static let titles = [
         "Sample Scholastic Open Draws Record Field", "Tactics Tuesday: A Sample Back-Rank Trick",
@@ -289,6 +347,18 @@ struct MockNewsService: NewsProviding {
         try await Task.sleep(for: .milliseconds(250))
         let range = (page * Self.pageSize)..<((page + 1) * Self.pageSize)
         return NewsPage(articles: range.map(Self.article), hasMore: page < 2)
+    }
+
+    func kasparovArticles() async throws -> [NewsArticle] {
+        ["Sample Young Stars Session with a Grandmaster", "Sample Girls Nationals Sets Attendance Record",
+         "Sample Friendship Festival Opens Registration"].enumerated().map { index, title in
+            let slug = title.lowercased().replacingOccurrences(of: " ", with: "-")
+            return NewsArticle(title: title,
+                               link: URL(string: "https://kasparovchessfoundation.org/\(slug)/")!,
+                               published: Date.now.addingTimeInterval(-Double(index * 4 + 1) * 7 * 86_400),
+                               imageURL: nil,
+                               summary: "A sample foundation story for demo mode.")
+        }
     }
 
     func dates() async throws -> [String: Date] {

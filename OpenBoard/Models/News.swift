@@ -1,8 +1,20 @@
 import Foundation
 
-// MARK: - US Chess news (new.uschess.org)
+// MARK: - News (new.uschess.org and kasparovchessfoundation.org)
 
-/// One news article. Articles open on the website itself; the app lists them.
+/// Who published an article.
+enum NewsSource: Sendable {
+    case usChess, kasparov
+
+    var name: String {
+        switch self {
+        case .usChess: String(localized: "US Chess")
+        case .kasparov: String(localized: "Kasparov Chess Foundation")
+        }
+    }
+}
+
+/// One news article. Articles open on the publisher's website; the app lists them.
 struct NewsArticle: Identifiable, Codable, Sendable, Hashable {
     var id: String { link.absoluteString }
     var title: String
@@ -14,6 +26,11 @@ struct NewsArticle: Identifiable, Codable, Sendable, Hashable {
     var imageURL: URL?
     /// The listing's teaser: the article's opening lines.
     var summary: String
+
+    /// Told apart by the link, so cached articles need no new field.
+    var source: NewsSource {
+        link.host()?.hasSuffix("kasparovchessfoundation.org") == true ? .kasparov : .usChess
+    }
 
     /// The same photo at 750×400, for the large card. The site renders any
     /// image style on request, with or without the style's token.
@@ -29,6 +46,36 @@ struct NewsArticle: Identifiable, Codable, Sendable, Hashable {
 struct NewsPage: Codable, Sendable, Hashable {
     var articles: [NewsArticle]
     var hasMore: Bool
+}
+
+/// The News tab's one feed: US Chess articles in listing order, with Kasparov
+/// Chess Foundation articles slotted in by date.
+enum NewsFeed {
+    /// While the US Chess listing still has pages to load, only KCF articles no
+    /// older than its oldest loaded article are shown, so the feed never jumps
+    /// past a stretch of US Chess news that hasn't loaded yet.
+    static func merge(
+        _ usChess: [NewsArticle],
+        kasparov: [NewsArticle],
+        complete: Bool
+    ) -> [NewsArticle] {
+        let floor = usChess.last?.published
+        var extra = kasparov.filter { article in
+            if complete { return true }
+            guard let floor, let published = article.published else { return false }
+            return published >= floor
+        }[...]
+        var feed: [NewsArticle] = []
+        for article in usChess {
+            while let next = extra.first,
+                  (next.published ?? .distantPast) > (article.published ?? .distantPast) {
+                feed.append(next)
+                extra = extra.dropFirst()
+            }
+            feed.append(article)
+        }
+        return feed + extra
+    }
 }
 
 /// How far back the News tab reaches.
