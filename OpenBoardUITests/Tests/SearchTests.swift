@@ -24,4 +24,22 @@ final class SearchTabTests: Runner {
         search.assertOnScreen()
             .assertJoinUSChess()
     }
+
+    /// Recent searches can be swiped away one by one, or cleared at once.
+    /// (The newest is on top, clear of the keyboard.)
+    @MainActor
+    func testRemoveRecentSearches() {
+        launch(.screen(.search))
+        search.assertOnScreen()
+            .search("rivera")
+            .search("sterling")
+            .search("brooks")
+            .removeRecent("brooks")
+            .assertNoRecent("brooks")
+            .assertRecent("sterling")
+            .assertRecent("rivera")
+            .clearRecents()
+            .assertNoRecent("sterling")
+            .assertNoRecent("rivera")
+    }
 }

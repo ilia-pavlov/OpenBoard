@@ -47,6 +47,16 @@ final class AppModel {
 
     var selectedTab: AppTab = .myCard
 
+    /// Players whose Best wins scan the user paused. Kept across launches so a
+    /// paused scan doesn't restart every time My Card or the profile appears.
+    private(set) var pausedBestWins: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: "bestWins.paused") ?? [])
+
+    func setBestWinsPaused(_ paused: Bool, for memberID: String) {
+        if paused { pausedBestWins.insert(memberID) } else { pausedBestWins.remove(memberID) }
+        UserDefaults.standard.set(Array(pausedBestWins), forKey: "bestWins.paused")
+    }
+
     /// Defaults come from launch arguments; previews pass them explicitly since
     /// they can't set launch arguments.
     init(dataSource: AppEnvironment.DataSource = AppEnvironment.dataSource,
@@ -184,6 +194,25 @@ final class AppModel {
         let rows = (try? context.fetch(FetchDescriptor<WatchedPlayer>())) ?? []
         for row in rows { row.isPrimary = row.memberID == memberID }
         try? context.save()
+    }
+
+    /// Saves a new order for watched players (drag and drop in Watching):
+    /// `sortOrder` follows the array.
+    func reorderWatched(_ ordered: [WatchedPlayer]) {
+        for (index, row) in ordered.enumerated() where row.sortOrder != index {
+            row.sortOrder = index
+        }
+        try? container.mainContext.save()
+    }
+
+    func forgetSearch(_ search: RecentSearch) {
+        container.mainContext.delete(search)
+        try? container.mainContext.save()
+    }
+
+    func clearSearches() {
+        try? container.mainContext.delete(model: RecentSearch.self)
+        try? container.mainContext.save()
     }
 
     func rememberSearch(_ query: String) {

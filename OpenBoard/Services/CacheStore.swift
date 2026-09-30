@@ -200,12 +200,28 @@ final class CachedRatingsService: RatingsProviding, Sendable {
     /// (`BestWins.canStop`). Sections already cached cost nothing; the rest are
     /// paced at `scanSpacing` and cached for good, so a cancelled scan resumes
     /// where it left off. A section that fails to load is skipped.
-    func bestWinsScan(memberID: String, limit: Int = 3) -> AsyncThrowingStream<BestWinsProgress, Error> {
+    ///
+    /// `cachedOnly` makes no requests at all: it reports what earlier scans
+    /// already found (for a paused scan), never finishing.
+    func bestWinsScan(
+        memberID: String,
+        limit: Int = 3,
+        cachedOnly: Bool = false
+    ) -> AsyncThrowingStream<BestWinsProgress, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let record = try await regularWins(memberID: memberID)
-                    let playerRatings = await ownPreRatings(memberID: memberID)
+                    let record: RatedWins
+                    if cachedOnly {
+                        guard let saved = await cache.read(RatedWins.self, key: "wins-\(memberID)", ttl: .infinity) else {
+                            continuation.finish()
+                            return
+                        }
+                        record = saved.value
+                    } else {
+                        record = try await regularWins(memberID: memberID)
+                    }
+                    let playerRatings = cachedOnly ? [:] : await ownPreRatings(memberID: memberID)
                     let order = BestWins.scanOrder(record.wins, playerRatings: playerRatings)
                     var preRatings: [SectionKey: [String: Int]] = [:]
                     var best: [NotableWin] = []
@@ -221,12 +237,14 @@ final class CachedRatingsService: RatingsProviding, Sendable {
 
                     report(finished: false)
                     for key in order {
-                        if BestWins.canStop(best: best,
+                        if !cachedOnly, BestWins.canStop(best: best,
                                             limit: limit,
                                             nextPlayerRating: playerRatings[key.eventID]) { break }
                         let cacheKey = Self.preRatingsKey(key.eventID, key.section)
                         if let saved = await cache.read([String: Int].self, key: cacheKey, ttl: .infinity) {
                             preRatings[key] = saved.value
+                        } else if cachedOnly {
+                            continue
                         } else {
                             try Task.checkCancellation()
                             preRatings[key] = try? await regularPreRatings(eventID: key.eventID, section: key.section)
@@ -239,7 +257,7 @@ final class CachedRatingsService: RatingsProviding, Sendable {
                                              limit: limit)
                         report(finished: false)
                     }
-                    report(finished: true)
+                    report(finished: !cachedOnly)
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

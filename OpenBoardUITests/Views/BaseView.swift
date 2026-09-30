@@ -123,11 +123,26 @@ class BaseView {
         return self
     }
 
+    @discardableResult
+    func assertNotSelected(
+        _ id: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        let row = element(id).assertExistence(file: file, line: line)
+        XCTAssertFalse(row.isSelected, "'\(id)' is still highlighted", file: file, line: line)
+        return self
+    }
+
     /// Opens the row, comes back, and checks the list didn't move and the row is
     /// marked: the "back keeps my place" behavior every event list shares.
+    /// `choosing` names the menu item to pick when the row opens a menu;
+    /// `marked: false` for rows that don't mark the last one opened.
     @discardableResult
     func assertBackKeepsPlace(
         of id: String,
+        choosing menuItem: String? = nil,
+        marked: Bool = true,
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> Self {
@@ -143,10 +158,12 @@ class BaseView {
         }
         let before = top(of: id)
         element(id).tap()
+        if let menuItem { tap(menuItem, file: file, line: line) }
         goBack(file: file, line: line)
         element(id).assertExistence(file: file, line: line)
         XCTAssertEqual(top(of: id), before, accuracy: 1, "List moved after coming back", file: file, line: line)
-        return assertSelected(id, file: file, line: line)
+        if marked { assertSelected(id, file: file, line: line) }
+        return self
     }
 
     // MARK: - Best wins (My Card and player profiles)
@@ -168,6 +185,7 @@ class BaseView {
         return self
     }
 
+    /// Taps a win and picks "Open tournament" from its menu.
     @discardableResult
     func tapBestWin(
         _ opponentID: String,
@@ -175,6 +193,18 @@ class BaseView {
         line: UInt = #line
     ) -> Self {
         scrollToAndTap(AccessibilityID.bestWin(opponentID), file: file, line: line)
+        return tap(AccessibilityID.bestWinTournament, file: file, line: line)
+    }
+
+    /// Taps a win and picks "View <name>'s profile" from its menu.
+    @discardableResult
+    func tapBestWinProfile(
+        _ opponentID: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Self {
+        scrollToAndTap(AccessibilityID.bestWin(opponentID), file: file, line: line)
+        return tap(AccessibilityID.bestWinProfile, file: file, line: line)
     }
 
     @discardableResult

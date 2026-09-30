@@ -105,6 +105,31 @@ struct BestWinsTests {
         #expect(await upstream.standingsRequests == 3)   // nothing fetched the second time
     }
 
+    /// A paused card shows what earlier scans found without any requests, and
+    /// never reports the scan as finished.
+    @Test @MainActor func cachedOnlyScanMakesNoRequests() async throws {
+        let upstream = ScriptedUpstream()
+        let service = CachedRatingsService(upstream: upstream,
+                                           container: try TestContainer.inMemory(),
+                                           scanSpacing: .zero)
+        let full = try await finalStep(of: service.bestWinsScan(memberID: ScriptedUpstream.playerID))
+        let saved = try await finalStep(of: service.bestWinsScan(memberID: ScriptedUpstream.playerID,
+                                                                 cachedOnly: true))
+
+        #expect(saved.wins == full.wins)
+        #expect(!saved.isFinished)
+        #expect(await upstream.standingsRequests == 3) // only the full scan's
+    }
+
+    @Test @MainActor func cachedOnlyScanWithNothingSavedIsEmpty() async throws {
+        let service = CachedRatingsService(upstream: ScriptedUpstream(),
+                                           container: try TestContainer.inMemory(),
+                                           scanSpacing: .zero)
+        var steps = 0
+        for try await _ in service.bestWinsScan(memberID: ScriptedUpstream.playerID, cachedOnly: true) { steps += 1 }
+        #expect(steps == 0)
+    }
+
     private func finalStep(of scan: AsyncThrowingStream<BestWinsProgress, Error>) async throws -> BestWinsProgress {
         var last: BestWinsProgress?
         for try await step in scan { last = step }

@@ -15,7 +15,8 @@ final class BestWinsTests: Runner {
             .assertBestWin(ivy, mentions: ["Ivy Nguyen", "106"])
     }
 
-    /// A win opens that event's crosstable; back returns to the same spot, row marked.
+    /// A win opens that event's crosstable; back returns to the same spot, and
+    /// the win isn't left highlighted (it read as stuck inside the card).
     @MainActor
     func testWinOpensCrosstableAndBackKeepsPlace() {
         launch(.demoSeed)
@@ -23,8 +24,20 @@ final class BestWinsTests: Runner {
             .tapBestWin(owen)
         crosstable.assertOnScreen()
             .goBack()
-        myCard.assertSelected(AccessibilityID.bestWin(owen))
-            .assertBackKeepsPlace(of: AccessibilityID.bestWin(owen))
+        myCard.assertNotSelected(AccessibilityID.bestWin(owen))
+            .assertBackKeepsPlace(of: AccessibilityID.bestWin(owen),
+                                  choosing: AccessibilityID.bestWinTournament,
+                                  marked: false)
+            .assertNotSelected(AccessibilityID.bestWin(owen))
+    }
+
+    /// A win can also open the opponent's profile.
+    @MainActor
+    func testWinOpensOpponentProfile() {
+        launch(.demoSeed)
+        myCard.assertOnScreen()
+            .tapBestWinProfile(owen)
+        profile.assertLoaded()
     }
 
     /// ⓘ explains the card in plain words.
