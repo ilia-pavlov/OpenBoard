@@ -3,13 +3,21 @@ import Foundation
 // MARK: - News (new.uschess.org and kasparovchessfoundation.org)
 
 /// Who published an article.
-enum NewsSource: Sendable {
+enum NewsSource: String, CaseIterable, Sendable {
     case usChess, kasparov
 
     var name: String {
         switch self {
         case .usChess: String(localized: "US Chess")
         case .kasparov: String(localized: "Kasparov Chess Foundation")
+        }
+    }
+
+    /// For the source filter.
+    var shortName: String {
+        switch self {
+        case .usChess: String(localized: "US Chess")
+        case .kasparov: String(localized: "Kasparov Foundation")
         }
     }
 }
