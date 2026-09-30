@@ -191,7 +191,7 @@ enum TournamentParser {
             organizerPhone: node.field_organizer_phone_number?.first?.value,
             organizerWebsite: website,
             registrationURL: registrationLink(in: bodyHTML),
-            announcement: plainText(fromHTML: bodyHTML),
+            announcement: markdown(fromHTML: bodyHTML),
             links: links
         )
     }
@@ -220,23 +220,100 @@ enum TournamentParser {
             .compactMap(URL.init(string:))
     }
 
-    /// Paragraphs and list items as plain text; tags stripped, entities decoded.
-    static func plainText(fromHTML html: String) -> String {
-        var text = html
-        for (pattern, replacement) in [(#"(?i)<br\s*/?>"#, "\n"),
-                                       // Organizers put each line in its own <p>; headings get a gap.
-                                       (#"(?i)</(p|div|tr)>"#, "\n"),
-                                       (#"(?i)</h\d>"#, "\n\n"),
-                                       (#"(?i)<li[^>]*>"#, "• "),
-                                       (#"(?i)</li>"#, "\n"),
-                                       (#"<[^>]+>"#, "")] {
-            text = text.replacingOccurrences(of: pattern, with: replacement, options: .regularExpression)
+    /// The announcement as inline Markdown: bold, italic and links kept, headings
+    /// bolded, list items as "• " lines. Newlines separate paragraphs, so render it
+    /// with `.inlineOnlyPreservingWhitespace`.
+    static func markdown(fromHTML html: String) -> String {
+        var out = ""
+        var bold = 0, italic = 0
+        var open = (bold: false, italic: false)
+        var linkURL: String?
+        var linkStart: Int? // UTF-8 offset into `out` where the link text begins
+
+        // Markers open lazily at the next visible text and close before whitespace,
+        // so "<strong>Prize&nbsp;</strong>" becomes "**Prize** " (valid emphasis).
+        func closeMarkers() {
+            let trailing = out.reversed().prefix { $0 == " " || $0 == "\u{00A0}" }
+            out.removeLast(trailing.count)
+            if open.italic { out += "*"; open.italic = false }
+            if open.bold { out += "**"; open.bold = false }
+            out += String(trailing)
         }
-        text = unescape(text)
-        text = text.replacingOccurrences(of: #"[ \t\u{00A0}]+"#, with: " ", options: .regularExpression)
-        text = text.replacingOccurrences(of: #" *\n *"#, with: "\n", options: .regularExpression)
-        text = text.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        func text(_ raw: String) {
+            let escaped = unescape(raw).replacingOccurrences(of: #"[\\*_\[\]`~<>]"#,
+                                                             with: #"\\$0"#,
+                                                             options: .regularExpression)
+            guard let firstVisible = escaped.firstIndex(where: { !$0.isWhitespace }) else {
+                out += escaped
+                return
+            }
+            out += escaped[..<firstVisible]
+            if (bold > 0) != open.bold || (italic > 0) != open.italic { closeMarkers() }
+            if bold > 0 && !open.bold { out += "**"; open.bold = true }
+            if italic > 0 && !open.italic { out += "*"; open.italic = true }
+            out += escaped[firstVisible...]
+        }
+        func lineBreak(_ breaks: String) {
+            closeMarkers()
+            out += breaks
+        }
+
+        for token in captures(#"(<[^>]*>|[^<]+)"#, in: html) {
+            guard token.hasPrefix("<") else { text(token); continue }
+            let tag = token.lowercased()
+            let name = tag.drop { $0 == "<" || $0 == "/" }.prefix { $0.isLetter || $0.isNumber }
+            let closing = tag.hasPrefix("</")
+            switch name {
+            case "br": lineBreak("\n")
+            case "p", "div", "tr": if closing { lineBreak("\n") }
+            case "h1", "h2", "h3", "h4", "h5", "h6":
+                if closing { bold -= 1; lineBreak("\n\n") } else { lineBreak(""); bold += 1 }
+            case "strong", "b": bold += closing ? -1 : 1; if closing { closeMarkers() }
+            case "em", "i": italic += closing ? -1 : 1; if closing { closeMarkers() }
+            case "li": if closing { lineBreak("\n") } else { text("• ") }
+            case "a":
+                // Emphasis never straddles a link boundary; it reopens inside or after.
+                closeMarkers()
+                if closing, let url = linkURL, let offset = linkStart {
+                    let start = out.utf8.index(out.startIndex, offsetBy: offset)
+                    // Brackets hug the visible link text; surrounding spaces stay outside.
+                    if let first = out[start...].firstIndex(where: { !$0.isWhitespace }) {
+                        let trailing = out.reversed().prefix(while: \.isWhitespace)
+                        out.removeLast(trailing.count)
+                        // Emphasis inside link text is dropped by the Markdown parser, so a
+                        // wholly bold/italic link carries its markers outside the brackets.
+                        var label = String(out[first...])
+                        out.removeSubrange(first...)
+                        var wrap = ""
+                        for marker in ["**", "*"] where label.count > 2 * marker.count
+                            && label.hasPrefix(marker) && label.hasSuffix(marker) && !label.hasSuffix("\\" + marker) {
+                            label = String(label.dropFirst(marker.count).dropLast(marker.count))
+                            wrap = marker + wrap
+                        }
+                        label = label.replacingOccurrences(of: #"(?<!\\)\*+"#, with: "", options: .regularExpression)
+                        let target = url.replacingOccurrences(of: " ", with: "%20")
+                            .replacingOccurrences(of: ">", with: "%3E")
+                        out += wrap + "[" + label + "](<\(target)>)" + String(wrap.reversed()) + String(trailing)
+                    }
+                    linkURL = nil
+                    linkStart = nil
+                } else if !closing,
+                          let href = captures(#"href="([^"]+)""#, in: token).first.map(unescape),
+                          ["http:", "https:", "mailto:", "tel:"].contains(where: href.lowercased().hasPrefix) {
+                    linkURL = href
+                    linkStart = out.utf8.count
+                }
+            default: break
+            }
+            bold = max(bold, 0)
+            italic = max(italic, 0)
+        }
+        closeMarkers()
+
+        out = out.replacingOccurrences(of: #"[ \t\x{00A0}]+"#, with: " ", options: .regularExpression)
+        out = out.replacingOccurrences(of: #" *\n *"#, with: "\n", options: .regularExpression)
+        out = out.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: Plan Ahead Calendar
@@ -391,7 +468,7 @@ struct MockTournamentsService: TournamentsProviding {
             organizerName: listing.organizer, organizerEmail: "info@example.com", organizerPhone: "5555550100",
             organizerWebsite: URL(string: "https://example.com"),
             registrationURL: URL(string: "https://example.com/register"),
-            announcement: "\(listing.summary)\n\nSections\n• Under 500\n• Under 1000\n• Open\n\nEntry fee: $40 by the Wednesday before.",
+            announcement: "\(listing.summary)\n\n**Sections**\n• Under 500\n• Under 1000\n• Open\n\n**Entry fee:** $40 by the Wednesday before. [Register here](<https://example.com/register>)\n\nQuestions? Email info@example.com or call 555-555-0100.",
             links: [URL(string: "https://example.com/register")!])
     }
 

@@ -54,9 +54,39 @@ struct UpcomingTournamentTests {
         #expect(detail.latitude == 40.564642)
         #expect(detail.organizerName == "Dash Chess Academy")
         #expect(detail.registrationURL?.host() == "forms.gle") // the organizer's Google Form
-        #expect(detail.announcement.contains("Tournament Format: Swiss"))
-        #expect(detail.announcement.contains("• "))
-        #expect(!detail.announcement.contains("<"))
+        #expect(detail.announcement.contains("**Tournament Format: Swiss**"))
+        #expect(detail.announcement.contains("• **🏆 1st Place** Trophy in each Section"))
+        #expect(detail.announcement.contains("[Register here](<https://forms.gle/7qqwd7Bpb6AH19mMA>)"))
+        #expect(!detail.announcement.contains("<p"))
+    }
+
+    @Test func formatsAnnouncementForDisplay() throws {
+        let detail = try TournamentParser.detail(id: "/dca", json: try fixture("tla_node"))
+        let text = detail.formattedAnnouncement
+        let plain = String(text.characters)
+        #expect(!plain.contains("**"))
+        #expect(!plain.contains("]("))
+
+        let register = try #require(text.range(of: "Register here"))
+        #expect(text[register].link?.host() == "forms.gle")
+        let heading = try #require(text.range(of: "Tournament Format"))
+        #expect(text[heading].inlinePresentationIntent?.contains(.stronglyEmphasized) == true)
+        let email = try #require(text.range(of: "dashchessacademy@dashnmore.com"))
+        #expect(text[email].link?.scheme == "mailto") // bare email detected
+    }
+
+    @Test(arguments: [
+        ("<p><strong>Fee&nbsp;</strong>$40</p>", "**Fee** $40"),
+        ("<p>Use <em>G/25</em>; d5</p>", "Use *G/25*; d5"),
+        ("<h3>Prizes</h3><ul><li>1st</li></ul>", "**Prizes**\n\n• 1st"),
+        ("<p>a_b * c [x]</p>", #"a\_b \* c \[x\]"#),
+        ("<h2><a href=\"https://x.org\"><strong><u>K-12 Swiss</u></strong></a></h2>", "**[K-12 Swiss](<https://x.org>)**"),
+        ("<p><a href=\"https://x.org\">Pay <strong>now</strong></a></p>", "[Pay now](<https://x.org>)"),
+        ("<p><a href=\"javascript:x\">Click</a></p>", "Click"),
+        ("<p><a href=\"https://x.org\"><img src=\"a.png\"></a>Text</p>", "Text"),
+    ])
+    func convertsAnnouncementHTML(html: String, markdown: String) {
+        #expect(TournamentParser.markdown(fromHTML: html) == markdown)
     }
 
     @Test func parsesPlanAheadCalendar() throws {

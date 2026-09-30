@@ -250,9 +250,10 @@ struct TournamentDetailContent: View {
     private var announcementCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(text: "Announcement")
-            Text(detail.announcement)
+            Text(detail.formattedAnnouncement)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
+                .tint(Color.obGold)
                 .lineLimit(showFullAnnouncement ? nil : 12)
                 .textSelection(.enabled)
             Button(showFullAnnouncement ? "Show less" : "Show more") {
