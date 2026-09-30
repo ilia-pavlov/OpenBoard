@@ -1,23 +1,42 @@
 import SafariServices
 import SwiftUI
 
-/// News tab: recent US Chess articles, newest first. The newest is a full-bleed
-/// hero, the rest of this week are large cards, and older ones sit in a grid.
-/// Articles open on the website, inside the app, where they read best.
+/// News tab: US Chess articles, newest first, a page (~15) at a time — more load
+/// as you reach the bottom. A range filter limits how far back it goes. The
+/// newest article is a large photo card; the rest are rows with the article's
+/// photo, grouped by month. Articles open on the website, inside the app.
 struct NewsView: View {
     @Environment(AppModel.self) private var model
-    @State private var state: Loadable<[NewsArticle]> = .idle
+    @State private var range: NewsRange = .all
+    @State private var articles: [NewsArticle] = []
+    @State private var nextPage = 0
+    @State private var hasMore = true
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     /// The article open in Safari.
     @State private var reading: NewsArticle?
     /// The article opened last, outlined when the user comes back.
     @State private var lastOpenedID: String?
 
-    private let gridColumns = [GridItem(.adaptive(minimum: 160), spacing: 12, alignment: .top)]
+    private var cutoff: Date? { range.cutoff() }
+
+    private var shown: [NewsArticle] {
+        guard let cutoff else { return articles }
+        return articles.filter { ($0.published ?? .distantPast) >= cutoff }
+    }
+
+    /// Past the range's cutoff, older pages have nothing to add.
+    private var canLoadMore: Bool {
+        guard hasMore else { return false }
+        guard let cutoff, let oldest = articles.last?.published else { return true }
+        return oldest >= cutoff
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 ScreenTitle("News")
+                rangePicker
                 content
             }
             .padding(16)
@@ -25,68 +44,106 @@ struct NewsView: View {
         .accessibilityIdentifier(AccessibilityID.Screen.news)
         .background(Color.obBackground)
         .toolbar(.hidden, for: .navigationBar)
-        .task { if state.value == nil { await load(force: false) } }
-        .refreshable { await load(force: true) }
+        .task { if articles.isEmpty { await loadNextPage() } }
+        .refreshable { await reload() }
         .fullScreenCover(item: $reading) { article in
             SafariView(url: article.link) { reading = nil }
                 .ignoresSafeArea()
         }
     }
 
+    // MARK: - Range
+
+    private var rangePicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(NewsRange.allCases) { option in
+                    let selected = option == range
+                    Button {
+                        withAnimation(.snappy) { range = option }
+                    } label: {
+                        Text(option.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selected ? Color.black : Color.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(selected ? Color.obGold : Color.obCard, in: Capsule())
+                            .overlay(Capsule().strokeBorder(selected ? Color.clear : Color.obHairline))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityIdentifier(AccessibilityID.newsRange(option.rawValue))
+                }
+            }
+        }
+        .scrollClipDisabled()
+    }
+
     // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
-        switch state {
-        case .idle, .loading:
-            SkeletonCard(height: 300)
-            SkeletonCard(height: 240)
-        case .loaded(let articles):
-            feed(articles)
-        case .failed(let message, let cached, let cachedAt):
-            ErrorCard(message: message, cachedAt: cachedAt) {
-                Task { await load(force: true) }
+        let shown = shown
+        if let errorMessage, articles.isEmpty {
+            ErrorCard(message: errorMessage, cachedAt: nil) {
+                Task { await reload() }
             }
-            if let cached { feed(cached) }
-        }
-    }
-
-    @ViewBuilder
-    private func feed(_ articles: [NewsArticle]) -> some View {
-        if let hero = articles.first {
-            let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
-            let rest = articles.dropFirst()
-            let thisWeek = rest.filter { ($0.published ?? .distantPast) >= weekAgo }
-            let earlier = rest.filter { ($0.published ?? .distantPast) < weekAgo }
-
+        } else if let hero = shown.first {
             open(hero) { HeroNewsCard(article: hero) }
-
-            if !thisWeek.isEmpty {
-                SectionLabel(text: "This week")
+            ForEach(monthGroups(Array(shown.dropFirst())), id: \.title) { group in
+                SectionLabel(text: group.title)
                     .padding(.top, 8)
-                ForEach(thisWeek) { article in
-                    open(article) { NewsCard(article: article) }
-                }
-            }
-            if !earlier.isEmpty {
-                SectionLabel(text: "Earlier")
-                    .padding(.top, 8)
-                LazyVGrid(columns: gridColumns, spacing: 12) {
-                    ForEach(earlier) { article in
-                        open(article, cornerRadius: 16) { NewsTile(article: article) }
+                VStack(spacing: 0) {
+                    ForEach(Array(group.articles.enumerated()), id: \.element.id) { index, article in
+                        if index > 0 {
+                            Divider().padding(.leading, 104)
+                        }
+                        open(article, cornerRadius: 0) { NewsRow(article: article) }
                     }
                 }
+                .obCard()
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
+        } else if !isLoading && !canLoadMore {
+            EmptyStateCard(systemImage: "newspaper",
+                           title: "No news \(range == .all ? "yet" : "in this range")",
+                           message: range == .all ? "Pull down to check again." : "Try a longer range.")
+        }
+
+        if canLoadMore {
+            // Reaching the bottom loads the next page; a short range keeps loading
+            // until it passes its cutoff.
+            HStack(spacing: 10) {
+                ProgressView()
+                Text(articles.isEmpty ? "Loading news…" : "Loading more…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .onAppear { Task { await loadNextPage() } }
+            .id(articles.count) // a new page re-arms onAppear
+        } else if !shown.isEmpty {
             Text("Articles open on new.uschess.org.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
-        } else {
-            EmptyStateCard(systemImage: "newspaper",
-                           title: "No news right now",
-                           message: "Pull down to check again.")
         }
+    }
+
+    /// Rows grouped under "September 2026"-style headers, in order.
+    private func monthGroups(_ articles: [NewsArticle]) -> [(title: String, articles: [NewsArticle])] {
+        var groups: [(title: String, articles: [NewsArticle])] = []
+        for article in articles {
+            let title = article.published?.formatted(.dateTime.month(.wide).year()) ?? String(localized: "Earlier")
+            if groups.last?.title == title {
+                groups[groups.count - 1].articles.append(article)
+            } else {
+                groups.append((title, [article]))
+            }
+        }
+        return groups
     }
 
     /// A tappable article that opens on the website and is outlined on return.
@@ -100,24 +157,46 @@ struct NewsView: View {
             reading = article
         } label: {
             label()
-                .lastOpened(lastOpenedID == article.id, cornerRadius: cornerRadius)
+                .background(cornerRadius == 0 && lastOpenedID == article.id ? Color.obGold.opacity(0.12) : .clear)
+                .lastOpened(cornerRadius > 0 && lastOpenedID == article.id, cornerRadius: cornerRadius)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(lastOpenedID == article.id ? .isSelected : [])
         .accessibilityHint("Opens the article on US Chess")
         .accessibilityIdentifier(AccessibilityID.newsArticle(article.id))
     }
 
     // MARK: - Loading
 
-    private func load(force: Bool) async {
-        if state.value == nil { state = .loading }
+    private func loadNextPage() async {
+        guard !isLoading, hasMore else { return }
+        isLoading = true
+        defer { isLoading = false }
         do {
-            state = .loaded(try await model.news.latest(force: force))
+            let page = try await model.news.page(nextPage)
+            let known = Set(articles.map(\.id))
+            articles = NewsParser.settleDates(articles + page.articles.filter { !known.contains($0.id) })
+            hasMore = page.hasMore
+            nextPage += 1
+            errorMessage = nil
         } catch is CancellationError {
-            // Left the tab mid-load; the next visit loads again.
+            // Left the tab; the next visit picks up here.
         } catch {
-            let cached = await model.news.cachedLatest()
-            state = .failed(message: error.localizedDescription, cached: cached?.0, cachedAt: cached?.1)
+            // Stop here; pull to refresh (or Retry) starts over.
+            errorMessage = error.localizedDescription
+            hasMore = false
+        }
+    }
+
+    private func reload() async {
+        do {
+            let page = try await model.news.page(0, force: true)
+            articles = NewsParser.settleDates(page.articles)
+            hasMore = page.hasMore
+            nextPage = 1
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }
@@ -129,8 +208,8 @@ private struct HeroNewsCard: View {
     let article: NewsArticle
 
     var body: some View {
-        NewsImage(url: article.imageURL)
-            .frame(height: 320)
+        NewsImage(url: article.largeImageURL ?? article.imageURL)
+            .frame(height: 300)
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -151,15 +230,22 @@ private struct HeroNewsCard: View {
                     if !article.summary.isEmpty {
                         Text(article.summary)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(.white.opacity(0.85))
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
                 }
+                .shadow(color: .black.opacity(0.5), radius: 6)
                 .padding(18)
+                .padding(.top, 40)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                    // Strong enough to carry white text over busy graphics too.
+                    LinearGradient(stops: [.init(color: .clear, location: 0),
+                                           .init(color: .black.opacity(0.75), location: 0.35),
+                                           .init(color: .black.opacity(0.92), location: 1)],
+                                   startPoint: .top,
+                                   endPoint: .bottom)
                 )
             }
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -168,89 +254,48 @@ private struct HeroNewsCard: View {
     }
 }
 
-/// This week's articles: photo on top, headline and opening lines below.
-private struct NewsCard: View {
+/// An article row: its photo as a rounded avatar, the headline, opening lines
+/// and date.
+private struct NewsRow: View {
     let article: NewsArticle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            NewsImage(url: article.imageURL)
-                .frame(height: 180)
-                .frame(maxWidth: .infinity)
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .top, spacing: 14) {
+            NewsImage(url: article.imageURL, compact: true)
+                .frame(width: 76, height: 76)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 if !article.summary.isEmpty {
                     Text(article.summary)
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
-                NewsByline(article: article)
-                    .padding(.top, 2)
+                if let when = Format.newsDate(article.published) {
+                    Text(when)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.tertiary)
+                }
             }
-            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .obCard()
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(14)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 }
 
-/// Older articles, two to a row: photo and headline.
-private struct NewsTile: View {
-    let article: NewsArticle
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            NewsImage(url: article.imageURL)
-                .frame(height: 110)
-                .frame(maxWidth: .infinity)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(article.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .topLeading)
-                Text(Format.newsDate(article.published) ?? "")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(12)
-        }
-        .obCard(cornerRadius: 16)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// "JJ Lang · 2 days ago"
-private struct NewsByline: View {
-    let article: NewsArticle
-
-    var body: some View {
-        Text([article.author, Format.newsDate(article.published)]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-            .joined(separator: " · "))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-    }
-}
-
-/// A photo that fills its frame. Articles without one (or while it loads) get a
-/// gold-tinted panel with a knight, so the feed never shows a gray hole.
+/// A photo that fills its frame. While it loads, or when an article has none,
+/// a gold-tinted panel with a knight stands in.
 private struct NewsImage: View {
     let url: URL?
+    var compact = false
 
     var body: some View {
         LinearGradient(colors: [Color.obGold.opacity(0.28), Color.obCard],
@@ -258,7 +303,7 @@ private struct NewsImage: View {
                        endPoint: .bottomTrailing)
             .overlay {
                 Text("♞")
-                    .font(.system(size: 56))
+                    .font(.system(size: compact ? 30 : 56))
                     .foregroundStyle(Color.obGold.opacity(0.35))
             }
             .overlay {
