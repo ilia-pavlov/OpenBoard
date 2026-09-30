@@ -57,6 +57,7 @@ struct TournamentDetailContent: View {
     // kept its old title after a tap. @Query republishes on every change.
     @Query private var saved: [SavedTournament]
     @State private var showFullAnnouncement = false
+    @State private var copiedAnnouncement = false
 
     var body: some View {
         ScrollView {
@@ -249,7 +250,10 @@ struct TournamentDetailContent: View {
 
     private var announcementCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Announcement")
+            HStack {
+                SectionLabel(text: "Announcement")
+                copyAnnouncementButton
+            }
             Text(detail.formattedAnnouncement)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
@@ -265,6 +269,29 @@ struct TournamentDetailContent: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .obCard()
+    }
+
+    private var copyAnnouncementButton: some View {
+        Button {
+            UIPasteboard.general.string = detail.copyableAnnouncement
+            copiedAnnouncement = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                copiedAnnouncement = false
+            }
+        } label: {
+            Label(copiedAnnouncement ? "Copied" : "Copy",
+                  systemImage: copiedAnnouncement ? "checkmark" : "doc.on.doc")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(copiedAnnouncement ? Color.obUp : Color.obGold)
+                .contentTransition(.symbolEffect(.replace))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.success, trigger: copiedAnnouncement) { _, new in new }
+        .accessibilityLabel("Copy announcement")
+        .accessibilityHint(copiedAnnouncement ? "Copied" : "Double-tap to copy the full announcement")
+        .accessibilityIdentifier(AccessibilityID.copyAnnouncement)
     }
 
     // MARK: - Organizer
