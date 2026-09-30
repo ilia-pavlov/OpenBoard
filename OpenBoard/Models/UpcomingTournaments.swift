@@ -40,7 +40,8 @@ struct TournamentDetail: Codable, Sendable, Hashable {
     var organizerWebsite: URL?
     /// Best guess at the registration link found in the announcement text.
     var registrationURL: URL?
-    /// Announcement body as plain text (paragraphs and "• " bullets).
+    /// Announcement body as inline Markdown (bold, italic, links; paragraphs on
+    /// their own lines, "• " bullets). Display it through `formattedAnnouncement`.
     var announcement: String
     var links: [URL]
 
@@ -51,6 +52,40 @@ struct TournamentDetail: Codable, Sendable, Hashable {
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
         let parts = [street, cityLine].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    /// The announcement styled for display, with bare web addresses, emails and
+    /// phone numbers made tappable alongside the organizer's own links.
+    var formattedAnnouncement: AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        var text = (try? AttributedString(markdown: announcement, options: options))
+            ?? AttributedString(announcement)
+        let plain = String(text.characters)
+        let types: NSTextCheckingResult.CheckingType = [.link, .phoneNumber]
+        guard let detector = try? NSDataDetector(types: types.rawValue) else { return text }
+        for match in detector.matches(in: plain, range: NSRange(plain.startIndex..., in: plain)) {
+            let url = match.url ?? match.phoneNumber.flatMap { URL(string: "tel:" + $0.filter(\.isNumber)) }
+            guard let url, let range = Range(match.range, in: text),
+                  text[range].runs.allSatisfy({ $0.link == nil }) else { continue }
+            text[range].link = url
+        }
+        return text
+    }
+
+    /// Plain text for the clipboard: named links keep their address in
+    /// parentheses ("Register here (https://…)") so pasting loses nothing.
+    var copyableAnnouncement: String {
+        let text = formattedAnnouncement
+        var out = ""
+        for (link, range) in text.runs[\.link] {
+            let label = String(text[range].characters)
+            out += label
+            if let link, link.scheme?.hasPrefix("http") == true,
+               !label.contains(link.host() ?? link.absoluteString) {
+                out += " (\(link.absoluteString))"
+            }
+        }
+        return out
     }
 }
 
@@ -76,7 +111,7 @@ struct MajorEvent: Identifiable, Codable, Sendable, Hashable {
 // MARK: - Search filters
 
 enum SearchRadius: Int, CaseIterable, Identifiable, Codable, Sendable {
-    case mi25 = 25, mi50 = 50, mi100 = 100, mi200 = 200
+    case mi10 = 10, mi25 = 25, mi50 = 50, mi100 = 100, mi200 = 200, mi300 = 300, mi500 = 500
     var id: Int { rawValue }
     var title: String { "\(rawValue) mi" }
 }

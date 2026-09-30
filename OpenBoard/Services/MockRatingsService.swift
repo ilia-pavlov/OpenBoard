@@ -50,7 +50,7 @@ struct MockRatingsService: RatingsProviding {
 
     /// Sample players placed on lists so badges show up in demo mode.
     private static let topListPlacements: [String: [(rank: Int, id: String, name: String, state: String?)]] = [
-        "Regular9": [(37, samplePlayerID, "Alex Rivera", "NJ")],
+        "Regular9": [(37, samplePlayerID, "Alex Rivera", "NJ"), (81, "90000013", "Owen Price", "NJ")],
         "Regular8": [(48, "90000010", "Ava Sterling", nil)],
         "WomensRegular8": [(12, "90000010", "Ava Sterling", nil)],
         "WomensRegular9": [(64, "90000011", "Maya Brooks", nil)],
@@ -77,6 +77,39 @@ struct MockRatingsService: RatingsProviding {
                                 state: states[(rank + definition.id.count) % 10], rating: top - rank * 8)
         }
         return TopList(definition: definition, reportDate: Self.date(2026, 9, 1), entries: entries)
+    }
+
+    // MARK: - Best wins (from the sample event's rounds)
+
+    func regularWins(memberID: String) async throws -> RatedWins {
+        try await Task.sleep(for: .milliseconds(300))
+        let event = Self.sampleEvent
+        let rounds = event.sections.flatMap { section in
+            section.players.first { $0.id == memberID }?.rounds ?? []
+        }
+        let wins = event.sections.enumerated().flatMap { index, section -> [RatedWin] in
+            guard let me = section.players.first(where: { $0.id == memberID }) else { return [] }
+            return me.rounds.compactMap { round in
+                guard round.symbol == "W",
+                      let opponent = section.players.first(where: { $0.rank == round.opponentRank }) else { return nil }
+                return RatedWin(opponentID: opponent.id,
+                                opponentName: opponent.name,
+                                eventID: event.id,
+                                eventName: event.name,
+                                section: index + 1,
+                                date: event.date)
+            }
+        }
+        return RatedWins(gameCount: rounds.filter { ["W", "L", "D"].contains($0.symbol) }.count, wins: wins)
+    }
+
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
+        guard eventID == Self.sampleEvent.id, Self.sampleEvent.sections.indices.contains(section - 1) else {
+            throw RatingsError.notFound
+        }
+        return Self.sampleEvent.sections[section - 1].players.reduce(into: [:]) { map, standing in
+            if let pre = standing.regular?.pre { map[standing.id] = pre }
+        }
     }
 
     // MARK: - Seed: synthetic primary player
