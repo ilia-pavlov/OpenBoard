@@ -18,6 +18,11 @@ struct UpcomingTournamentsSection: View {
     @State private var majors: Loadable<[MajorEvent]> = .idle
     @State private var editingLocation = false
     @State private var locationText = ""
+    /// The search the current listings came from; coming back from a tournament
+    /// re-runs `.task`, and reloading the same search would reset the scroll.
+    @State private var loadedSearchKey: String?
+    /// The row opened last (listing or major event ID), outlined on return.
+    @State private var lastOpenedID: String?
 
     private var location: LocationProvider { model.location }
 
@@ -159,8 +164,10 @@ struct UpcomingTournamentsSection: View {
             ForEach(dated) { listing in
                 NavigationLink(value: Destination.upcomingTournament(id: listing.id)) {
                     TournamentListingRow(listing: listing)
+                        .lastOpened(lastOpenedID == listing.id)
                 }
                 .buttonStyle(.plain)
+                .onOpen { lastOpenedID = listing.id }
                 .accessibilityIdentifier(AccessibilityID.upcoming(listing.id))
             }
             if !recurring.isEmpty {
@@ -169,8 +176,11 @@ struct UpcomingTournamentsSection: View {
                 ForEach(recurring) { listing in
                     NavigationLink(value: Destination.upcomingTournament(id: listing.id)) {
                         TournamentListingRow(listing: listing)
+                            .lastOpened(lastOpenedID == listing.id)
                     }
                     .buttonStyle(.plain)
+                    .onOpen { lastOpenedID = listing.id }
+                    .accessibilityIdentifier(AccessibilityID.upcoming(listing.id))
                 }
             }
             Text("Listings from US Chess Tournament Life Announcements.")
@@ -209,8 +219,10 @@ struct UpcomingTournamentsSection: View {
         ForEach(upcoming) { event in
             NavigationLink(value: Destination.majorEvent(event)) {
                 MajorEventRow(event: event)
+                    .lastOpened(lastOpenedID == event.id)
             }
             .buttonStyle(.plain)
+            .onOpen { lastOpenedID = event.id }
         }
     }
 
@@ -218,9 +230,12 @@ struct UpcomingTournamentsSection: View {
 
     private func loadListings() async {
         guard let origin = location.origin else { return }
+        let key = searchKey
+        guard key != loadedSearchKey || listings.value == nil else { return }
         listings = .loading
         do {
             listings = .loaded(try await model.tournaments.upcoming(near: origin, radius: radius))
+            loadedSearchKey = key
         } catch is CancellationError {
             // A newer search replaced this one.
         } catch {

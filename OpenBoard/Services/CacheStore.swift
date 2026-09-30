@@ -130,9 +130,19 @@ final class CachedRatingsService: RatingsProviding, Sendable {
     let upstream: any RatingsProviding
     let cache: CacheStore
 
-    init(upstream: any RatingsProviding, container: ModelContainer) {
+    /// Gap between standings requests during a best-wins scan. The API allows
+    /// roughly 100 requests a minute; one a second leaves room for the screens
+    /// people open. Tests pass zero.
+    let scanSpacing: Duration
+
+    init(
+        upstream: any RatingsProviding,
+        container: ModelContainer,
+        scanSpacing: Duration = .seconds(1)
+    ) {
         self.upstream = upstream
         self.cache = CacheStore(modelContainer: container)
+        self.scanSpacing = scanSpacing
     }
 
     func player(id: String) async throws -> Player {
@@ -158,6 +168,92 @@ final class CachedRatingsService: RatingsProviding, Sendable {
     func topList(_ definition: TopListDefinition) async throws -> TopList {
         try await cachedFetch(key: "toplist-\(definition.id)", ttl: Self.topListTTL) {
             try await self.upstream.topList(definition)
+        }
+    }
+
+    func regularWins(memberID: String) async throws -> RatedWins {
+        try await cachedFetch(key: "wins-\(memberID)", ttl: Self.winsTTL) {
+            try await self.upstream.regularWins(memberID: memberID)
+        }
+    }
+
+    /// A rated section's results never change, so its ratings are kept for good.
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
+        try await cachedFetch(key: Self.preRatingsKey(eventID, section), ttl: .infinity) {
+            try await self.upstream.regularPreRatings(eventID: eventID, section: section)
+        }
+    }
+
+    private static func preRatingsKey(_ eventID: String, _ section: Int) -> String {
+        "prerating-\(eventID)-\(section)"
+    }
+
+    /// New wins only arrive when an event is rated; a few hours is fresh enough.
+    private static let winsTTL: TimeInterval = 6 * 60 * 60
+
+    /// Finds the player's `limit` best wins by the opponent's pre-event Regular
+    /// rating, reporting progress after every section.
+    ///
+    /// Ratings come from each section's standings: one request per section with
+    /// a win. Sections are checked strongest first (the player's own rating going
+    /// in) and the scan stops once no remaining section could hold a better win
+    /// (`BestWins.canStop`). Sections already cached cost nothing; the rest are
+    /// paced at `scanSpacing` and cached for good, so a cancelled scan resumes
+    /// where it left off. A section that fails to load is skipped.
+    func bestWinsScan(memberID: String, limit: Int = 3) -> AsyncThrowingStream<BestWinsProgress, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let record = try await regularWins(memberID: memberID)
+                    let playerRatings = await ownPreRatings(memberID: memberID)
+                    let order = BestWins.scanOrder(record.wins, playerRatings: playerRatings)
+                    var preRatings: [SectionKey: [String: Int]] = [:]
+                    var best: [NotableWin] = []
+                    var checked = 0
+
+                    func report(finished: Bool) {
+                        continuation.yield(BestWinsProgress(wins: best,
+                                                            gameCount: record.gameCount,
+                                                            eventsChecked: checked,
+                                                            eventsTotal: order.count,
+                                                            isFinished: finished))
+                    }
+
+                    report(finished: false)
+                    for key in order {
+                        if BestWins.canStop(best: best,
+                                            limit: limit,
+                                            nextPlayerRating: playerRatings[key.eventID]) { break }
+                        let cacheKey = Self.preRatingsKey(key.eventID, key.section)
+                        if let saved = await cache.read([String: Int].self, key: cacheKey, ttl: .infinity) {
+                            preRatings[key] = saved.value
+                        } else {
+                            try Task.checkCancellation()
+                            preRatings[key] = try? await regularPreRatings(eventID: key.eventID, section: key.section)
+                            try await Task.sleep(for: scanSpacing)
+                        }
+                        checked += 1
+                        best = BestWins.rank(record.wins,
+                                             playerID: memberID,
+                                             preRatings: preRatings,
+                                             limit: limit)
+                        report(finished: false)
+                    }
+                    report(finished: true)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// The player's own Regular rating going into each event, by event ID.
+    private func ownPreRatings(memberID: String) async -> [String: Int] {
+        guard let player = try? await player(id: memberID) else { return [:] }
+        return player.events.reduce(into: [:]) { map, event in
+            if let pre = event.regular?.pre { map[event.id] = pre }
         }
     }
 

@@ -15,3 +15,13 @@ final class SearchTests: Runner {
             .assertStanding(Sample.playerID)
     }
 }
+
+final class SearchTabTests: Runner {
+    /// Join / renew US Chess sits under Top 100.
+    @MainActor
+    func testJoinUSChessRow() {
+        launch(.screen(.search))
+        search.assertOnScreen()
+            .assertJoinUSChess()
+    }
+}

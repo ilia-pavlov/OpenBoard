@@ -35,6 +35,13 @@ enum AccessibilityID {
 
     static let heroRatingCard = "hero-rating-card"
     static let profileRatingCard = "profile-rating-card"
+    static let bestWins = "best-wins"
+    static let bestWinsInfo = "best-wins-info"
+    static let bestWinsInfoPopover = "best-wins-info-popover"
+    /// A row of My Card's Recent events.
+    static func recentEvent(_ eventID: String) -> String { "recent-event-\(eventID)" }
+    /// One row of Best wins, keyed by the opponent's member ID.
+    static func bestWin(_ opponentID: String) -> String { "best-win-\(opponentID)" }
     static let watchToggle = "watch-toggle"
     static func historyEvent(_ eventID: String) -> String { "history-event-\(eventID)" }
 
@@ -62,6 +69,7 @@ enum AccessibilityID {
     static func upcoming(_ listingID: String) -> String { "upcoming-\(listingID)" }
     static let tournamentRegister = "tournament-register"
     static let tournamentSave = "tournament-save"
+    static let copyAnnouncement = "copy-announcement"
     /// One saved tournament row in Watching, e.g. `savedTournament("/sample-saturday-quads")`.
     static func savedTournament(_ id: String) -> String { "saved-tournament-\(id)" }
     static let tournamentAddress = "tournament-address"

@@ -95,6 +95,30 @@ struct APIRoundOutcome: Decodable, Sendable {
     var opponentLastName: String?
 }
 
+/// One game from `members/{id}/games`: who played whom, and the result. No
+/// ratings — those come from the section's standings.
+struct APIMemberGame: Decodable, Sendable {
+    struct Section: Decodable, Sendable { var number: Int? }
+    struct Event: Decodable, Sendable {
+        var id: String?
+        var name: String?
+        var startDate: String?
+        var endDate: String?
+    }
+    struct Side: Decodable, Sendable {
+        var id: String?
+        var firstName: String?
+        var lastName: String?
+        var outcome: String?    // "Win" / "Loss" / "Draw"
+    }
+
+    var section: Section?
+    var event: Event?
+    var ratingSystem: String?   // "R" regular, "D" dual (regular + quick), "Q", "B", "OR", …
+    var player: Side?
+    var opponent: Side?
+}
+
 struct APIMaxRank: Decodable, Sendable {
     var ratingSource: String?
     var maxRank: Int?
@@ -241,6 +265,21 @@ enum USCFMapper {
                                     state: p.stateRep, rating: rating)
             }
         )
+    }
+
+    /// A Regular-rated win (regular or dual-rated game), or nil for anything else.
+    static func regularWin(_ game: APIMemberGame) -> RatedWin? {
+        guard game.player?.outcome == "Win",
+              ["R", "D"].contains(game.ratingSystem),
+              let opponentID = game.opponent?.id,
+              let eventID = game.event?.id,
+              let section = game.section?.number else { return nil }
+        return RatedWin(opponentID: opponentID,
+                        opponentName: name(first: game.opponent?.firstName, last: game.opponent?.lastName),
+                        eventID: eventID,
+                        eventName: game.event?.name?.capitalizedIfShouty() ?? "Event \(eventID)",
+                        section: section,
+                        date: date(game.event?.endDate ?? game.event?.startDate))
     }
 
     static func summary(member: APIMember) -> PlayerSummary {

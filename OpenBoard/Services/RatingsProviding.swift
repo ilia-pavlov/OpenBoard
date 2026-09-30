@@ -7,6 +7,11 @@ protocol RatingsProviding: Sendable {
     /// Every Top 100 list US Chess publishes (monthly).
     func topListDefinitions() async throws -> [TopListDefinition]
     func topList(_ definition: TopListDefinition) async throws -> TopList
+    /// Every rated Regular game (dual-rated included) across the career: the
+    /// count, and the wins.
+    func regularWins(memberID: String) async throws -> RatedWins
+    /// Regular pre-event ratings by member ID, for one section of a rated event.
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int]
 }
 
 enum RatingsError: LocalizedError {
@@ -14,6 +19,7 @@ enum RatingsError: LocalizedError {
     case httpStatus(Int)
     case notFound
     case offline(underlying: String)
+    case rateLimited
 
     var errorDescription: String? {
         switch self {
@@ -21,6 +27,7 @@ enum RatingsError: LocalizedError {
         case .httpStatus(let code): "US Chess responded with an error (\(code))."
         case .notFound: "No record found."
         case .offline(let s): "Couldn't reach US Chess. \(s)"
+        case .rateLimited: "US Chess is getting too many requests right now. Try again in a minute."
         }
     }
 }
