@@ -41,7 +41,7 @@ struct CacheTests {
             func topList(_ definition: TopListDefinition) async throws -> TopList {
                 throw RatingsError.offline(underlying: "test")
             }
-            func regularWins(memberID: String) async throws -> [RatedWin] { [] }
+            func regularWins(memberID: String) async throws -> RatedWins { RatedWins(gameCount: 0, wins: []) }
             func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] { [:] }
         }
         let container = try TestContainer.inMemory()

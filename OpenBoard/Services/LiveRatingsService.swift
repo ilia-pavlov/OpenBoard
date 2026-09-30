@@ -90,14 +90,14 @@ actor LiveRatingsService: RatingsProviding {
                           sections: sections)
     }
 
-    func regularWins(memberID id: String) async throws -> [RatedWin] {
+    func regularWins(memberID id: String) async throws -> RatedWins {
         // RatingSource=R returns regular and dual-rated games. Very active players
         // have well over 1,000 games, hence the higher page cap.
         let games: [APIMemberGame] = try await Self.collectPages(pageSize: 100, maxPages: 50) { offset, size in
             try await self.get("members/\(id)/games",
                                query: ["RatingSource": "R", "Size": String(size), "Offset": String(offset)])
         }
-        return games.compactMap(USCFMapper.regularWin)
+        return RatedWins(gameCount: games.count, wins: games.compactMap(USCFMapper.regularWin))
     }
 
     func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
@@ -155,25 +155,42 @@ actor LiveRatingsService: RatingsProviding {
         return try decoder.decode(T.self, from: data)
     }
 
+    /// Seconds to wait before each retry of a rate-limited (429) request; the
+    /// last entry is never waited on. Adds up to about a minute, the API's window.
+    private static let rateLimitBackoff: [Double] = [4, 10, 20, 30, 0]
+
     private func fetchData(_ url: URL) async throws -> Data {
         if let existing = inflight[url] {
             return try await existing.value
         }
         let task = Task<Data, Error> { [session] in
-            do {
-                let (data, response) = try await session.data(from: url)
-                if let http = response as? HTTPURLResponse {
-                    if http.statusCode == 404 { throw RatingsError.notFound }
-                    guard (200..<300).contains(http.statusCode) else {
-                        throw RatingsError.httpStatus(http.statusCode)
+            // The API allows roughly 100 requests a minute and then answers 429 for
+            // about 40 seconds. Wait it out rather than failing the screen.
+            for (attempt, backoff) in Self.rateLimitBackoff.enumerated() {
+                do {
+                    let (data, response) = try await session.data(from: url)
+                    if let http = response as? HTTPURLResponse {
+                        if http.statusCode == 404 { throw RatingsError.notFound }
+                        if http.statusCode == 429 {
+                            guard attempt < Self.rateLimitBackoff.count - 1 else { throw RatingsError.rateLimited }
+                            let retryAfter = (http.value(forHTTPHeaderField: "Retry-After")).flatMap(Double.init)
+                            try await Task.sleep(for: .seconds(retryAfter ?? backoff))
+                            continue
+                        }
+                        guard (200..<300).contains(http.statusCode) else {
+                            throw RatingsError.httpStatus(http.statusCode)
+                        }
                     }
+                    return data
+                } catch let error as RatingsError {
+                    throw error
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    throw RatingsError.offline(underlying: error.localizedDescription)
                 }
-                return data
-            } catch let error as RatingsError {
-                throw error
-            } catch {
-                throw RatingsError.offline(underlying: error.localizedDescription)
             }
+            throw RatingsError.rateLimited
         }
         inflight[url] = task
         defer { inflight[url] = nil }

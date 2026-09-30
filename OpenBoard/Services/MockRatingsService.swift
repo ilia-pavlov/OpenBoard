@@ -81,10 +81,13 @@ struct MockRatingsService: RatingsProviding {
 
     // MARK: - Best wins (from the sample event's rounds)
 
-    func regularWins(memberID: String) async throws -> [RatedWin] {
+    func regularWins(memberID: String) async throws -> RatedWins {
         try await Task.sleep(for: .milliseconds(300))
         let event = Self.sampleEvent
-        return event.sections.enumerated().flatMap { index, section -> [RatedWin] in
+        let rounds = event.sections.flatMap { section in
+            section.players.first { $0.id == memberID }?.rounds ?? []
+        }
+        let wins = event.sections.enumerated().flatMap { index, section -> [RatedWin] in
             guard let me = section.players.first(where: { $0.id == memberID }) else { return [] }
             return me.rounds.compactMap { round in
                 guard round.symbol == "W",
@@ -97,6 +100,7 @@ struct MockRatingsService: RatingsProviding {
                                 date: event.date)
             }
         }
+        return RatedWins(gameCount: rounds.filter { ["W", "L", "D"].contains($0.symbol) }.count, wins: wins)
     }
 
     func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {

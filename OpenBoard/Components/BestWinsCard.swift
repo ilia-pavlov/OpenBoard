@@ -3,52 +3,103 @@ import SwiftUI
 /// "Best wins": the highest-rated opponents the player has beaten in Regular
 /// play, rated as they were going into that event. The top win is featured;
 /// the next two sit under it. Each row opens that event's crosstable.
-/// Hidden when the player has no wins over rated opponents, or when loading fails.
+///
+/// The first scan of an active player takes a while (one paced request per
+/// event), so wins appear as they're found, above a progress line. Hidden when
+/// the finished scan finds no wins over rated opponents, or fails with none.
 struct BestWinsCard: View {
     let memberID: String
 
     @Environment(AppModel.self) private var model
-    @State private var state: Loadable<[NotableWin]> = .idle
+    @State private var progress: BestWinsProgress?
+    @State private var stopped = false
 
     var body: some View {
-        switch state {
-        case .idle, .loading:
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "Best wins")
-                    .padding(.top, 8)
-                SkeletonCard(height: 132)
-            }
-            .task(id: memberID) { await load() }
-        case .loaded(let wins) where !wins.isEmpty:
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "Best wins")
-                    .padding(.top, 8)
-                VStack(spacing: 0) {
-                    ForEach(Array(wins.enumerated()), id: \.element.id) { index, win in
-                        if index > 0 {
-                            Divider().padding(.leading, 16)
+        Group {
+            if isHidden {
+                EmptyView()
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Best wins")
+                        .padding(.top, 8)
+                    VStack(spacing: 0) {
+                        ForEach(Array((progress?.wins ?? []).enumerated()), id: \.element.id) { index, win in
+                            if index > 0 {
+                                Divider().padding(.leading, 16)
+                            }
+                            NavigationLink(value: Destination.event(id: win.eventID, highlight: memberID)) {
+                                BestWinRow(win: win, featured: index == 0)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(BestWinRow.accessibilityText(win))
+                            .accessibilityIdentifier(AccessibilityID.bestWin(win.opponentID))
                         }
-                        NavigationLink(value: Destination.event(id: win.eventID, highlight: memberID)) {
-                            BestWinRow(win: win, featured: index == 0)
+                        if progress?.isFinished != true {
+                            if progress?.wins.isEmpty == false {
+                                Divider().padding(.leading, 16)
+                            }
+                            statusRow
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier(AccessibilityID.bestWin(win.opponentID))
                     }
+                    .obCard()
+                    .animation(.snappy, value: progress?.wins)
                 }
-                .obCard()
+                .accessibilityElement(children: .contain) // keep each row's own identifier
+                .accessibilityIdentifier(AccessibilityID.bestWins)
             }
-            .accessibilityIdentifier(AccessibilityID.bestWins)
-        default:
-            EmptyView()
         }
+        .task(id: memberID) { await scan() }
     }
 
-    private func load() async {
-        state = .loading
+    /// Nothing to show: the scan ended (finished or failed) without a win.
+    private var isHidden: Bool {
+        let ended = stopped || progress?.isFinished == true
+        return ended && (progress?.wins.isEmpty ?? true)
+    }
+
+    private var statusRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                if !stopped {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !stopped, let progress, progress.eventsTotal > 0 {
+                ProgressView(value: Double(progress.eventsChecked), total: Double(progress.eventsTotal))
+                    .tint(Color.obGold)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var statusText: String {
+        guard let progress else { return String(localized: "Loading rated games…") }
+        if stopped {
+            return String(localized: "Couldn't finish: US Chess is busy. Showing wins found so far.")
+        }
+        let games = progress.gameCount.formatted()
+        return String(localized: "Analyzing \(games) games · \(progress.eventsChecked) of \(progress.eventsTotal) events")
+    }
+
+    private func scan() async {
+        progress = nil
+        stopped = false
         do {
-            state = .loaded(try await model.service.bestWins(memberID: memberID))
+            for try await step in model.service.bestWinsScan(memberID: memberID) {
+                progress = step
+            }
+        } catch is CancellationError {
+            // Left the screen; cached sections let the next visit pick up from here.
         } catch {
-            state = .failed(message: error.localizedDescription, cached: nil, cachedAt: nil)
+            stopped = true
         }
     }
 }
@@ -94,11 +145,10 @@ private struct BestWinRow: View {
         }
         .padding(featured ? 16 : 14)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityText)
     }
 
-    private var accessibilityText: String {
+    /// Read by VoiceOver on the row's link, in place of the row's separate texts.
+    static func accessibilityText(_ win: NotableWin) -> String {
         var text = "Beat \(win.opponentName), rated \(win.opponentRating), at \(win.eventName)"
         if let gap = win.ratingGap, gap > 0 { text += ", \(gap) points above" }
         return text

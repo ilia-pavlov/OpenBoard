@@ -191,6 +191,21 @@ struct RatedWin: Codable, Sendable, Hashable {
     var sectionKey: SectionKey { SectionKey(eventID: eventID, section: section) }
 }
 
+/// A player's Regular games: how many, and which were wins.
+struct RatedWins: Codable, Sendable, Hashable {
+    var gameCount: Int
+    var wins: [RatedWin]
+}
+
+/// Where a best-wins scan has got to; the card redraws on each step.
+struct BestWinsProgress: Sendable, Hashable {
+    var wins: [NotableWin]
+    var gameCount: Int
+    var eventsChecked: Int
+    var eventsTotal: Int
+    var isFinished: Bool
+}
+
 /// A win with both players' Regular ratings going into that event.
 struct NotableWin: Identifiable, Codable, Sendable, Hashable {
     var id: String { "\(eventID)-\(section)-\(opponentID)" }
@@ -232,6 +247,37 @@ enum BestWins {
             best[win.opponentID] = candidate
         }
         return Array(best.values.sorted(by: isBetter).prefix(limit))
+    }
+
+    /// Beating someone this far above your own rating is vanishingly rare
+    /// (an expected score around 1%), so it bounds where a better win can be.
+    static let maxUpset = 800
+
+    /// Sections to check, strongest first: by the player's own pre-event rating,
+    /// newest first among equals. Sections with no known rating go last, since
+    /// they can't be ruled out early.
+    static func scanOrder(_ wins: [RatedWin], playerRatings: [String: Int]) -> [SectionKey] {
+        var newest: [SectionKey: Date] = [:]
+        for win in wins {
+            newest[win.sectionKey] = max(newest[win.sectionKey] ?? .distantPast, win.date ?? .distantPast)
+        }
+        return newest.keys.sorted { a, b in
+            switch (playerRatings[a.eventID], playerRatings[b.eventID]) {
+            case let (x?, y?) where x != y: return x > y
+            case (.some, nil): return true
+            case (nil, .some): return false
+            default: return newest[a]! > newest[b]!
+            }
+        }
+    }
+
+    /// True once `best` is full and a player rated `nextPlayerRating` would need
+    /// an upset beyond `maxUpset` to beat anyone better than its last entry.
+    /// Sections come strongest first, so every later one is ruled out too.
+    static func canStop(best: [NotableWin], limit: Int, nextPlayerRating: Int?) -> Bool {
+        guard best.count >= limit, let floor = best.last?.opponentRating,
+              let nextPlayerRating else { return false }
+        return nextPlayerRating + maxUpset < floor
     }
 
     private static func isBetter(_ a: NotableWin, than b: NotableWin) -> Bool {
