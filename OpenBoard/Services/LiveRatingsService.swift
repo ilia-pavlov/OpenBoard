@@ -90,6 +90,23 @@ actor LiveRatingsService: RatingsProviding {
                           sections: sections)
     }
 
+    func regularWins(memberID id: String) async throws -> [RatedWin] {
+        // RatingSource=R returns regular and dual-rated games. Very active players
+        // have well over 1,000 games, hence the higher page cap.
+        let games: [APIMemberGame] = try await Self.collectPages(pageSize: 100, maxPages: 50) { offset, size in
+            try await self.get("members/\(id)/games",
+                               query: ["RatingSource": "R", "Size": String(size), "Offset": String(offset)])
+        }
+        return games.compactMap(USCFMapper.regularWin)
+    }
+
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
+        let players = try await standings(eventID: eventID, section: section)
+        return players.reduce(into: [:]) { map, standing in
+            if let pre = standing.regular?.pre { map[standing.id] = pre }
+        }
+    }
+
     // MARK: - Internals
 
     private func standings(eventID: String, section: Int) async throws -> [Standing] {

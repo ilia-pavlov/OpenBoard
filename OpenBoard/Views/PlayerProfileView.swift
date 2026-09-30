@@ -166,6 +166,8 @@ struct PlayerProfileView: View {
                 }
             }
         }
+
+        BestWinsCard(memberID: player.id)
     }
 
     private func dualFootnote(_ rating: Rating?) -> String? {

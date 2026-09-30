@@ -169,3 +169,73 @@ extension PlayerSummary {
                   regular: player.ratings.regular?.value)
     }
 }
+
+// MARK: - Best wins
+
+/// One section of a rated event, e.g. section 2 of event 202312050922.
+struct SectionKey: Codable, Sendable, Hashable {
+    var eventID: String
+    var section: Int
+}
+
+/// A rated Regular win (dual-rated games included), before the opponent's
+/// rating is known: the games list doesn't carry ratings, the standings do.
+struct RatedWin: Codable, Sendable, Hashable {
+    var opponentID: String
+    var opponentName: String
+    var eventID: String
+    var eventName: String
+    var section: Int
+    var date: Date?
+
+    var sectionKey: SectionKey { SectionKey(eventID: eventID, section: section) }
+}
+
+/// A win with both players' Regular ratings going into that event.
+struct NotableWin: Identifiable, Codable, Sendable, Hashable {
+    var id: String { "\(eventID)-\(section)-\(opponentID)" }
+    var opponentID: String
+    var opponentName: String
+    var opponentRating: Int
+    /// The player's own pre-event rating; nil while they were unrated.
+    var playerRating: Int?
+    var eventID: String
+    var eventName: String
+    var section: Int
+    var date: Date?
+
+    /// How far above the player the opponent was rated (negative = below).
+    var ratingGap: Int? { playerRating.map { opponentRating - $0 } }
+}
+
+enum BestWins {
+    /// The highest-rated opponents beaten, one entry per opponent (their best
+    /// rating when beaten more than once), newest first among equal ratings.
+    /// Wins over opponents unrated at the time are skipped.
+    static func rank(_ wins: [RatedWin],
+                     playerID: String,
+                     preRatings: [SectionKey: [String: Int]],
+                     limit: Int) -> [NotableWin] {
+        var best: [String: NotableWin] = [:]
+        for win in wins {
+            guard let ratings = preRatings[win.sectionKey],
+                  let opponentRating = ratings[win.opponentID] else { continue }
+            let candidate = NotableWin(opponentID: win.opponentID,
+                                       opponentName: win.opponentName,
+                                       opponentRating: opponentRating,
+                                       playerRating: ratings[playerID],
+                                       eventID: win.eventID,
+                                       eventName: win.eventName,
+                                       section: win.section,
+                                       date: win.date)
+            if let current = best[win.opponentID], !isBetter(candidate, than: current) { continue }
+            best[win.opponentID] = candidate
+        }
+        return Array(best.values.sorted(by: isBetter).prefix(limit))
+    }
+
+    private static func isBetter(_ a: NotableWin, than b: NotableWin) -> Bool {
+        if a.opponentRating != b.opponentRating { return a.opponentRating > b.opponentRating }
+        return (a.date ?? .distantPast) > (b.date ?? .distantPast)
+    }
+}

@@ -7,6 +7,10 @@ protocol RatingsProviding: Sendable {
     /// Every Top 100 list US Chess publishes (monthly).
     func topListDefinitions() async throws -> [TopListDefinition]
     func topList(_ definition: TopListDefinition) async throws -> TopList
+    /// Every rated Regular win (dual-rated games included), across the career.
+    func regularWins(memberID: String) async throws -> [RatedWin]
+    /// Regular pre-event ratings by member ID, for one section of a rated event.
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int]
 }
 
 enum RatingsError: LocalizedError {

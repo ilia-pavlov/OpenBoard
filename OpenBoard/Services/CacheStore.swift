@@ -161,6 +161,51 @@ final class CachedRatingsService: RatingsProviding, Sendable {
         }
     }
 
+    func regularWins(memberID: String) async throws -> [RatedWin] {
+        try await cachedFetch(key: "wins-\(memberID)", ttl: Self.winsTTL) {
+            try await self.upstream.regularWins(memberID: memberID)
+        }
+    }
+
+    /// A rated section's results never change, so its ratings are kept for good.
+    func regularPreRatings(eventID: String, section: Int) async throws -> [String: Int] {
+        try await cachedFetch(key: "prerating-\(eventID)-\(section)", ttl: .infinity) {
+            try await self.upstream.regularPreRatings(eventID: eventID, section: section)
+        }
+    }
+
+    /// New wins only arrive when an event is rated; a few hours is fresh enough.
+    private static let winsTTL: TimeInterval = 6 * 60 * 60
+
+    /// The player's `limit` best wins by the opponent's pre-event Regular rating.
+    /// One standings request per section with a win (a few for most players,
+    /// hundreds for the most active), six at a time; each is cached for good,
+    /// so only the first load is slow. A section that fails to load is skipped.
+    func bestWins(memberID: String, limit: Int = 3) async throws -> [NotableWin] {
+        let wins = try await regularWins(memberID: memberID)
+        let sections = Array(Set(wins.map(\.sectionKey)))
+        let preRatings = await withTaskGroup(of: (SectionKey, [String: Int]?).self) { group in
+            var pending = sections.makeIterator()
+            func fetchNext() {
+                guard let key = pending.next() else { return }
+                group.addTask {
+                    (key, try? await self.regularPreRatings(eventID: key.eventID, section: key.section))
+                }
+            }
+            for _ in 0..<6 { fetchNext() }
+            var collected: [SectionKey: [String: Int]] = [:]
+            while let (key, ratings) = await group.next() {
+                collected[key] = ratings
+                fetchNext()
+            }
+            return collected
+        }
+        return BestWins.rank(wins,
+                             playerID: memberID,
+                             preRatings: preRatings,
+                             limit: limit)
+    }
+
     /// Last stored copy regardless of freshness, plus its timestamp — for
     /// instant paint and the "showing cached from 3:12 PM" error state.
     func cachedPlayer(id: String) async -> (Player, Date)? {

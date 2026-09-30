@@ -109,6 +109,8 @@ struct MyCardView: View {
             rankingCards(ranking)
         }
 
+        BestWinsCard(memberID: player.id)
+
         if !player.events.isEmpty {
             SectionLabel(text: "Recent events")
                 .padding(.top, 8)
