@@ -13,10 +13,13 @@ app's parsers look for.
 Result per endpoint:
   FAIL  a field the snapshot has is gone, or changed type; HTTP error; a marker
         the parser needs is missing; fewer items than expected
+  WARN  HTTP 403: the server refused this machine (e.g. a CI runner's IP),
+        so nothing was checked; checks that need its result are skipped
   NOTE  new fields appeared (harmless for the app, worth knowing)
-Exit code 1 when anything fails. Standard library only.
+Exit code 1 when anything fails; warnings alone pass. Standard library only.
 """
 import json
+import os
 import re
 import sys
 import time
@@ -69,6 +72,17 @@ def endpoint(group, name, **values):
     for key, value in values.items():
         template = template.replace("{" + key + "}", value)
     return template
+
+
+class Skipped(Exception):
+    """A check that can't run because the one it builds on was blocked."""
+
+
+def need(context, key):
+    """A value an earlier check left in `context`, or Skipped if that check didn't run."""
+    if key not in context:
+        raise Skipped(f"needs {key!r} from an earlier check that was blocked or failed")
+    return context[key]
 
 
 def query(**params):
@@ -214,6 +228,11 @@ ANNOUNCEMENT_FIELDS = ["title", "body", "field_event_dates", "field_event_locati
                        "field_organizer_email_address", "field_organizer_phone_number",
                        "field_organizer_website"]
 
+# Filled from earlier checks' results; built here so coverage counts them
+# even when that earlier check is blocked.
+TOP_LIST_URL = API + endpoint("Ratings", "topList")
+ANNOUNCEMENT_URL = SITE + endpoint("Site", "announcement") + query(format="json")
+
 UPCOMING_URL = (SITE + "/" + endpoint("Site", "upcomingSearch")
                 + query(radius="50", origin="Somerville, NJ"))
 
@@ -236,7 +255,7 @@ CHECKS = [
                API + endpoint("Ratings", "topListCatalog") + query(size="200"),
                items_at=["items"], min_items=20),
     json_check("Top 100 list    · " + R["topList"],
-               lambda c: API + endpoint("Ratings", "topList", listID=c["top_list"]),
+               lambda c: TOP_LIST_URL.replace("{listID}", need(c, "top_list")),
                items_at=["topPlayers"], min_items=50),
     json_check("Games (Best wins) · " + R["memberGames"],
                API + endpoint("Ratings", "memberGames", memberID=PLAYER) + query(ratingSource="R", size="50"),
@@ -246,7 +265,7 @@ CHECKS = [
                         ("listingPath", "listingName", "listingDate", "listingAddress", "listingOrganizer")],
                row_marker=PAT["listingRow"], min_rows=5),
     json_check("Announcement    · " + S["announcement"] + "?" + P["format"] + "=json",
-               lambda c: SITE + endpoint("Site", "announcement", path=c["listing"]) + query(format="json"),
+               lambda c: ANNOUNCEMENT_URL.replace("{path}", need(c, "listing")),
                keys=ANNOUNCEMENT_FIELDS),
     html_check("Major events    · " + S["planAheadCalendar"], SITE + "/" + endpoint("Site", "planAheadCalendar"),
                markers=[("planAheadEntry", PAT["planAheadEntry"])],
@@ -260,12 +279,21 @@ FOLLOW_UPS = {"Top 100 catalog": remember_top_list, "Upcoming search": remember_
 
 def main(record):
     snapshot = json.loads(SNAPSHOT.read_text()) if SNAPSHOT.exists() and not record else {}
-    recorded, context, failures = {}, {}, 0
+    recorded, context, failures, warnings = {}, {}, 0, 0
     for name, run in CHECKS:
         key = name.split("·")[0].strip()
+        warning = None
         try:
             document, errors, raw = run(context)
-        except Exception as error:  # HTTP errors, timeouts, bad JSON, missing context
+        except urllib.error.HTTPError as error:
+            document, raw = None, None
+            if error.code == 403:
+                errors, warning = [], "blocked (HTTP 403): the server refused this machine; not a contract change"
+            else:
+                errors = [f"{type(error).__name__}: {error}"]
+        except Skipped as skip:
+            document, errors, raw, warning = None, [], None, f"skipped: {skip}"
+        except Exception as error:  # timeouts, bad JSON
             document, errors, raw = None, [f"{type(error).__name__}: {error}"], None
         for prefix, follow_up in FOLLOW_UPS.items():
             if key.startswith(prefix) and raw is not None:
@@ -280,9 +308,14 @@ def main(record):
                 else:
                     notes.append("not in the snapshot yet (run with --record)")
         failures += bool(errors)
-        print(f"{'FAIL' if errors else 'ok  '}  {name}")
+        warnings += bool(warning and not errors)
+        print(f"{'FAIL' if errors else 'WARN' if warning else 'ok  '}  {name}")
         for line in errors:
             print(f"        ✘ {line}")
+        if warning:
+            print(f"        ! {warning}")
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(f"::warning title={key}::{warning}")
         for line in notes:
             print(f"        · {line}")
     if record:
@@ -294,8 +327,9 @@ def main(record):
     if unchecked:
         failures += 1
         print(f"FAIL  Coverage: in {ENDPOINTS_FILE.name} but not checked here: {', '.join(unchecked)}")
-    print(f"\n{len(CHECKS) - failures}/{len(CHECKS)} endpoints match their contract "
-          f"({len(declared)} endpoints read from {ENDPOINTS_FILE.name}).")
+    print(f"\n{len(CHECKS) - failures - warnings}/{len(CHECKS)} endpoints match their contract"
+          + (f", {warnings} not checked (blocked or skipped)" if warnings else "")
+          + f" ({len(declared)} endpoints read from {ENDPOINTS_FILE.name}).")
     return 1 if failures and not record else 0
 
 
